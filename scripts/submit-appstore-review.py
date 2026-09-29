@@ -26,6 +26,9 @@ import urllib.error
 # 这里的兜底仅供本地运行使用。升级时两处一起改。
 CRYPTOGRAPHY_VERSION = "50.0.1"
 
+# App Store 把摄取失败标记为这些终态, 它们不会再变回 VALID。
+TERMINAL_BUILD_STATES = {"FAILED", "REJECTED", "INVALID"}
+
 
 def ensure_crypto():
     """确保 cryptography 库可用"""
@@ -160,6 +163,19 @@ def wait_for_build(app_id, jwt_factory, platform, target_version, max_wait_minut
             continue
 
         builds = resp.get("data", [])
+        # Apple 把摄取失败标成终态 (FAILED/REJECTED/INVALID), 不会变回 VALID。
+        # 不认这些状态的话, 明明构建已被拒也会空转到超时, 白等 25-40 分钟。
+        for b in builds:
+            attrs = b.get("attributes", {})
+            if (attrs.get("version") == target_version
+                    and attrs.get("processingState") in TERMINAL_BUILD_STATES):
+                print(
+                    f"\nERROR: 构建 {target_version} 被 App Store 拒绝 "
+                    f"(processingState={attrs.get('processingState')})"
+                )
+                print("  请到 App Store Connect 查看该构建的处理结果与通知邮件")
+                return None, None, jwt
+
         if check_count == 0:
             print(f"  找到 {len(builds)} 个构建:")
             for b in builds[:5]:
@@ -190,7 +206,7 @@ def wait_for_build(app_id, jwt_factory, platform, target_version, max_wait_minut
     # 旧 build 提审要么必然 409 (1.5.58 的失败根因), 要么会把缺少
     # NSCameraUsageDescription 的陈旧包送审上架。
     if not build_id:
-        print(f"\nERROR: {max_wait} 分钟内未出现版本为 {target_version} 的 VALID 构建")
+        print(f"\nERROR: {max_wait_minutes} 分钟内未出现版本为 {target_version} 的 VALID 构建")
         print("常见原因: Apple 摄取延迟 (可稍后手动提审) 或构建未通过摄取 (查 ASC 通知邮件)")
         try:
             resp = api_request("GET", f"/v1/apps/{app_id}/builds?limit=10", jwt)
