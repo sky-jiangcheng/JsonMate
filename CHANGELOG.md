@@ -767,6 +767,17 @@
 ### Fixed
 - manifest start_url/scope 跟随仓库改名 JsonNest -> JsonMate
 
+## [1.5.80] - 2026-09-29
+
+### Changed
+- 仓库与 npm / Cargo 包名改名为 `advanced-json-formatter`
+- 展示名由 `JsonMate` 改为 `Advanced JSON Formatter`，窗口标题与 PWA 图标标签使用短名 `JSON Formatter`
+
+### Fixed
+- 用 `bundle.macOS.bundleName` 钉住 macOS `CFBundleName` 为短名
+- 用 PlistBuddy 钉住 iOS `CFBundleDisplayName` / `CFBundleName` 为短名，避免图标标签被截断
+- 修复超时分支 `NameError` 并对终态构建快速失败
+
 ## [1.5.81] - 2026-09-29
 
 ### Fixed
@@ -793,14 +804,4 @@
 - 新增 `tests/output-state.spec.mjs`（错误态端到端 + `diffJson` 源码级校验）
 - `scripts/test-tauri-detection.js` 移入 `tests/tauri-detection.spec.mjs`（转 ESM、自带静态服务，不再依赖外部 `:8765`）
 - CI `Layout Smoke Tests` 现依次执行三个 spec；此前测试命令是逐文件写死的，新增 spec 不接线就不会跑
-
-
-### Changed
-- 仓库与 npm / Cargo 包名改名为 `advanced-json-formatter`
-- 展示名由 `JsonMate` 改为 `Advanced JSON Formatter`，窗口标题与 PWA 图标标签使用短名 `JSON Formatter`
-
-### Fixed
-- 用 `bundle.macOS.bundleName` 钉住 macOS `CFBundleName` 为短名
-- 用 PlistBuddy 钉住 iOS `CFBundleDisplayName` / `CFBundleName` 为短名，避免图标标签被截断
-- 修复超时分支 `NameError` 并对终态构建快速失败
 
