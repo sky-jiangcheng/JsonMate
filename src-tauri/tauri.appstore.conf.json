@@ -1,5 +1,5 @@
 {
-  "productName": "JsonMate",
+  "productName": "Advanced JSON Formatter",
   "identifier": "com.jsonbeautify.desktop.appstore",
   "bundle": {
     "icon": [
@@ -22,5 +22,5 @@
       }
     }
   },
-  "version": "1.5.79"
+  "version": "1.5.80"
 }

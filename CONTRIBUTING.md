@@ -1,6 +1,6 @@
 # 项目规范（CONTRIBUTING）
 
-JsonMate Tool — 本地优先的 JsonMate（Tauri v2 桌面 + iOS + 网页）。
+Advanced JSON Formatter Tool — 本地优先的 Advanced JSON Formatter（Tauri v2 桌面 + iOS + 网页）。
 
 本文件定义目录归属、构建链路、资源/版本/提交约定，避免「文件散落、重复副本、源真值不清」。
 

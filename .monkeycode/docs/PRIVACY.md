@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**JsonMate Tool** is a local-first JSON formatting tool available on macOS, Windows, iOS, and the web. This policy explains how the app handles your data.
+**Advanced JSON Formatter Tool** is a local-first JSON formatting tool available on macOS, Windows, iOS, and the web. This policy explains how the app handles your data.
 
 ## Data Collection
 

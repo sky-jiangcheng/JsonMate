@@ -1,5 +1,5 @@
 {
-  "productName": "JsonMate",
+  "productName": "Advanced JSON Formatter",
   "identifier": "com.jsonbeautify.desktop.appstore.ios",
   "bundle": {
     "icon": [
@@ -19,5 +19,5 @@
       "icons/ios/AppIcon-83.5x83.5@2x.png"
     ]
   },
-  "version": "1.5.79"
+  "version": "1.5.80"
 }

@@ -1,7 +1,7 @@
 [package]
 name = "advanced-json-formatter"
-version = "1.5.79"
-description = "JsonMate - 支持格式化、压缩、树形视图、对比和历史记录"
+version = "1.5.80"
+description = "Advanced JSON Formatter - 支持格式化、压缩、树形视图、对比和历史记录"
 authors = ["sky-jiangcheng"]
 license = "MIT"
 repository = "https://github.com/sky-jiangcheng/advanced-json-formatter"

@@ -215,7 +215,7 @@ async function main() {
     const { context, page } = await newPage(browser, { viewport: { width: 1280, height: 800 }, locale: 'ja-JP' });
     check('lang-btn data-lang=ja', await page.getAttribute('#lang-btn', 'data-lang') === 'ja');
     check('格式化按钮显示「整形」', (await page.locator('[data-i18n="format"]').first().textContent()) === '整形');
-    check('标题为品牌名 JsonMate (title 不随语言变化)', (await page.title()) === 'JsonMate');
+      check('标题为品牌名 JSON Formatter (title 不随语言变化)', (await page.title()) === 'JSON Formatter');
     await context.close();
   });
 

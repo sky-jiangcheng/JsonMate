@@ -1,6 +1,6 @@
 # Tauri + 静态前端项目优化清单
 
-本文档总结 JsonMate 项目在开发、CI/CD、安全、UI 等方面踩过的坑和最终方案，可直接复用到其他类似项目。
+本文档总结 Advanced JSON Formatter 项目在开发、CI/CD、安全、UI 等方面踩过的坑和最终方案，可直接复用到其他类似项目。
 
 ---
 
@@ -227,7 +227,7 @@ Profiles → + → App Store，关联 App ID + 证书，下载后放入 `src-tau
 [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → 我的 App → +：
 - 平台：macOS
 - Bundle ID：上面创建的
-- 名称："JsonMate"
+- 名称："Advanced JSON Formatter"
 
 #### 构建与上传
 
@@ -1104,7 +1104,7 @@ await icon.resize(192, 192).png().toFile('dist/icons/icon-192x192.png');
 ```javascript
 const I18N = {
     zh: {
-        title: 'JsonMate',
+        title: "JSON Formatter",
         format: '格式化',
         formatSuccess: '格式化成功',
         // ...
