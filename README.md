@@ -2,7 +2,7 @@
 
 一个现代化的 JSON 格式化、压缩、验证与对比工具。纯前端单文件实现，支持 Web / 桌面端 / iOS。
 
-> **在线使用** → [sky-jiangcheng.github.io/JsonNest](https://sky-jiangcheng.github.io/JsonNest/)
+> **在线使用** → [sky-jiangcheng.github.io/JsonMate](https://sky-jiangcheng.github.io/JsonMate/)
 
 ---
 
