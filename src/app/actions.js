@@ -39,9 +39,16 @@
         }
       }
     }
-    // 如果字符串本身是 stringify 过的一层 shell ("\"...\"") 就解一次
+    // 老版本可能把内容多 stringify 了一层(如 "{\"a\":1}")。仅当脱一层之后
+    // 内层仍是合法 JSON 时才脱壳: 顶层 JSON 字符串本身就是合法 JSON,
+    // 无条件脱壳会把 "hello" 变成非法的 hello, 该记录重载后再也格式化不了。
     if (content && content.length > 2 && content.charCodeAt(0) === 34 && content.charCodeAt(content.length - 1) === 34) {
-      try { content = JSON.parse(content); } catch (_) {}
+      try {
+        var unwrapped = JSON.parse(content);
+        if (typeof unwrapped === 'string') {
+          try { JSON.parse(unwrapped); content = unwrapped; } catch (_inner) { /* 内层不是 JSON: 原样保留 */ }
+        }
+      } catch (_) {}
     }
     // 单条超大记录的降级提示：不丢弃数据，但后续调用方可以根据 size 决定 UI 提示
     var sizeBytes = content.length;
@@ -65,6 +72,11 @@
     return out;
   }
 
+  /**
+   * 写入历史记录。返回 true = 已落盘, false = 两次写入都失败。
+   * 失败时**保留 localStorage 里的原有数据**并返回 false, 由调用方提示用户;
+   * 绝不能 removeItem —— 那会把用户全部历史静默删掉。
+   */
   function setHistory(arr) {
     try {
       // 裁剪上限,避免超大历史撑爆 localStorage 配额
@@ -77,6 +89,7 @@
         arr = normalized;
       }
       localStorage.setItem('jsonHistory', JSON.stringify(arr));
+      return true;
     } catch (e) {
       // 配额满/序列化失败时静默降级: 尝试只保留最近的 20 条再写一次
       console.warn('[actions] setHistory failed, trimming:', e);
@@ -89,8 +102,11 @@
           }
           localStorage.setItem('jsonHistory', JSON.stringify(trimmed));
         }
+        return true;
       } catch (e2) {
-        try { localStorage.removeItem('jsonHistory'); } catch (_) {}
+        // 二次写入仍失败: 不动已有键, 旧历史原样保留, 返回 false 让调用方报错
+        console.warn('[actions] setHistory 仍失败, 已保留原有历史记录(未删除):', e2);
+        return false;
       }
     }
   }

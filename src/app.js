@@ -95,6 +95,7 @@
       unnamed: '未命名', noHistory: '暂无历史记录', noHistoryHint: '格式化后保存即可',
       selectForCompare: '选中用于对比', deleteItem: '删除',
       historyTooLarge: '记录过大，无法保存（上限 500KB）',
+      historySaveFailed: '存储空间不足，历史记录未保存（原有记录已保留）',
       legacyEmptySnippet: '[空记录]',
       legacyHistoryUnavailable: '无法加载“{name}”（旧版格式不兼容）。可先备份内容后删除该记录。',
       autoQuoteId: '（已自动为标识符添加引号）',
@@ -170,6 +171,7 @@
       unnamed: 'Untitled', noHistory: 'No history yet', noHistoryHint: 'Format and save to see history',
       selectForCompare: 'Select to compare', deleteItem: 'Delete',
       historyTooLarge: 'Entry too large to save (max 500KB)',
+      historySaveFailed: 'Out of storage space; history was not saved (existing entries kept)',
       legacyEmptySnippet: '[empty entry]',
       legacyHistoryUnavailable: 'Cannot load "{name}" (legacy format unavailable). Back up the content, then delete it.',
       autoQuoteId: ' (auto-quoted identifier)',
@@ -245,6 +247,7 @@
       unnamed: 'Sin título', noHistory: 'Aún no hay historial', noHistoryHint: 'Formatea y guarda para ver el historial',
       selectForCompare: 'Selecciona para comparar', deleteItem: 'Eliminar',
       historyTooLarge: 'Entrada demasiado grande para guardar (máx 500KB)',
+      historySaveFailed: 'Espacio de almacenamiento insuficiente; el historial no se guardó (se conservan las entradas existentes)',
       legacyEmptySnippet: '[entrada vacía]',
       legacyHistoryUnavailable: 'No se puede cargar "{name}" (formato antiguo no disponible). Haz una copia de seguridad y luego bórralo.',
       autoQuoteId: ' (identificador entre comillas automáticamente)',
@@ -320,6 +323,7 @@
       unnamed: 'Unbenannt', noHistory: 'Noch kein Verlauf', noHistoryHint: 'Formatieren und speichern, um Verlauf zu sehen',
       selectForCompare: 'Zum Vergleichen auswählen', deleteItem: 'Löschen',
       historyTooLarge: 'Eintrag zu groß zum Speichern (max. 500 KB)',
+      historySaveFailed: 'Zu wenig Speicherplatz; der Verlauf wurde nicht gespeichert (bestehende Einträge bleiben erhalten)',
       legacyEmptySnippet: '[leerer Eintrag]',
       legacyHistoryUnavailable: '"{name}" kann nicht geladen werden (altes Format nicht verfügbar). Sichere den Inhalt und lösche ihn dann.',
       autoQuoteId: ' (Bezeichner automatisch in Anführungszeichen gesetzt)',
@@ -395,6 +399,7 @@
       unnamed: '名称未設定', noHistory: '履歴はまだありません', noHistoryHint: '整形して保存すると履歴が表示されます',
       selectForCompare: '比較用に選択', deleteItem: '削除',
       historyTooLarge: '項目が大きすぎて保存できません（最大500KB）',
+      historySaveFailed: '保存容量が不足しているため、履歴を保存できませんでした（既存履歴は保持されています）',
       legacyEmptySnippet: '[空の項目]',
       legacyHistoryUnavailable: '"{name}"を読み込めません（旧形式は利用できません）。内容をバックアップしてから削除してください。',
       autoQuoteId: '（識別子に自動で引用符を付与）',
@@ -748,7 +753,9 @@
         var history = (window.__actions && window.__actions.getHistory()) || [];
         var selectedIds = (window.__store && window.__store.getStateForKey('selectedIds')) || [];
         var result = (window.__actions && window.__actions.deleteHistory) ? window.__actions.deleteHistory(history, id, selectedIds) : { history: history, selectedIds: selectedIds };
-        if (window.__actions && window.__actions.setHistory) window.__actions.setHistory(result.history);
+        var written = (window.__actions && window.__actions.setHistory) ? window.__actions.setHistory(result.history) : true;
+        // 未落盘(配额满): 按 localStorage 里的旧数据重绘, 不更新选中态
+        if (written === false) { if (render.renderHistory) render.renderHistory(); return; }
         if (window.__store) window.__store.setState({ selectedIds: result.selectedIds });
         if (render.renderHistory) render.renderHistory();
       },

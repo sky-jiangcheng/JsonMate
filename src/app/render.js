@@ -1195,6 +1195,16 @@
   /* ==============================================================
      Platform-aware event handling helpers
   ============================================================== */
+  /**
+   * 写历史 + 失败提示。setHistory 现在在配额满时保留原有数据并返回 false,
+   * 这里负责把"没写进去"告诉用户, 而不是让调用方误报成功。
+   */
+  function persistHistory(history) {
+    if (_actions.setHistory(history) !== false) return true;
+    showToast(_i18n.t('historySaveFailed'), 3500, 'icon-alert-triangle');
+    return false;
+  }
+
   function handleHistoryClick(e) {
     var delBtn = e.target.closest('[data-delete-id]');
     if (delBtn) {
@@ -1203,7 +1213,7 @@
       var history = _actions.getHistory();
       var selectedIds = _store.getStateForKey('selectedIds') || [];
       var result = _actions.deleteHistory(history, id, selectedIds);
-      _actions.setHistory(result.history);
+      if (!persistHistory(result.history)) return true;
       _store.setState({ selectedIds: result.selectedIds, _platform: Platform.getPlatform() });
       if (_store.getStateForKey('loadedHistoryId') === id) {
         _store.setState({ loadedHistoryId: null });
@@ -1811,8 +1821,9 @@
         return;
       }
     }
-    // 单条历史大小上限: 超大 JSON 会迅速写满 localStorage 配额,
-    // setHistory 降级裁剪失败后会把整个 jsonHistory 键删除, 用户历史静默全丢
+    // 单条历史大小上限: 超大 JSON 会迅速写满 localStorage 配额。
+    // 超限时直接拒绝并提示, 避免把整份历史挤到配额边缘(配额满时 setHistory
+    // 会保留原有数据并返回 false, 由 persistHistory 报错, 不再静默丢历史)
     if (content.length > HISTORY_MAX_CHARS) {
       showToast(_i18n.t('historyTooLarge'), 2500, 'icon-alert-triangle');
       return;
@@ -1835,7 +1846,8 @@
       if (idx >= 0) {
         history[idx].name = finalName;
         history[idx].content = content;
-        _actions.setHistory(history);
+        // 写失败时保持弹窗打开(输入不丢), 已提示用户, 不再谎报"已更新"
+        if (!persistHistory(history)) return;
         closeSaveModal();
         renderHistory();
         showToast(_i18n.t('historyUpdated', { name: finalName }), 2000, 'icon-save');
@@ -1848,7 +1860,7 @@
     var entry = _actions.confirmSave(content, finalName);
     var history2 = _actions.getHistory();
     history2.unshift(entry);
-    _actions.setHistory(history2);
+    if (!persistHistory(history2)) return;
     closeSaveModal();
     renderHistory();
     showToast(_i18n.t('saved', { name: entry.name }), 2000, 'icon-save');
@@ -1882,7 +1894,7 @@
     clearTimeout(_clearHistoryTimer);
     _clearHistoryArmed = false;
     var result = _actions.clearAllHistory();
-    _actions.setHistory(result.history);
+    if (!persistHistory(result.history)) return;
     _store.setState({ selectedIds: result.selectedIds, loadedHistoryId: null });
     renderHistory();
     showToast(_i18n.t('historyCleared'), 2000, 'icon-trash');
