@@ -24,8 +24,10 @@ jobs:
           node scripts/build.js
           rm -rf docs
           mkdir -p docs
-          cp -r dist/* docs/
-          ls docs/
+          # 用 dist/. 而不是 dist/*: 通配不匹配点号文件, 会漏掉 build.js 写入的 .nojekyll,
+          # 导致 Pages 仍走 Jekyll 处理, 下划线开头的资源被吞掉。
+          cp -r dist/. docs/
+          ls -la docs/
 
       - name: Commit and push docs/
         run: |

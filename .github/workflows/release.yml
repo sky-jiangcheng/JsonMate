@@ -14,11 +14,18 @@ permissions:
 jobs:
   # ============================================================
   # 版本门禁: 所有构建/上架作业都依赖它
-  #   - 三处版本号 (package.json / tauri.conf.json / Cargo.toml) 必须一致
-  #   - 打 v* tag 时, tag 版本号必须等于文件当前版本
+  #   - 五处版本号 (version.json / package.json / tauri.conf.json / Cargo.toml / sw.js) 必须一致
+  #   - 打 v* tag 时, tag 版本号必须等于所有文件的当前版本
   #     否则会静默上传错误/重复的版本到 App Store
+  #   - 上架作业用的版本号从这里的 outputs.version 取 (来源 version.json),
+  #     不再用 github.ref_name (push appstore 分支时它是字面量 "appstore")
   # ============================================================
   version-gate:
+    outputs:
+      # 上架/去重检查用的版本号统一从这里取 version.json(单一版本源)。
+      # 不能用 github.ref_name: push 到 appstore 分支时它是字面量 "appstore",
+      # 当作版本传给检查脚本会查错对象, submit 脚本还会白等几十分钟才失败。
+      version: ${{ steps.resolve-version.outputs.version }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -27,8 +34,19 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Verify version consistency (3 files)
+      - name: Verify version consistency (5 files)
         run: node scripts/check-versions.js check
+
+      - name: Resolve release version from version.json
+        id: resolve-version
+        run: |
+          VER=$(node -p "require('./version.json').version")
+          if ! printf '%s' "$VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::version.json 里的版本号非法: '$VER'"
+            exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "本次发布版本: $VER"
 
       - name: Verify tag version matches files
         if: startsWith(github.ref, 'refs/tags/')
@@ -167,8 +185,8 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID_MAC }}
-          APP_VERSION: ${{ github.ref_name }}
-        run: python3 scripts/check-appstore-version.py MAC_OS "${GITHUB_REF_NAME#v}"
+          APP_VERSION: ${{ needs.version-gate.outputs.version }}
+        run: python3 scripts/check-appstore-version.py MAC_OS "$APP_VERSION"
 
       - name: Install Rust targets
         run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
@@ -383,7 +401,7 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID_MAC }}
-          APP_VERSION: ${{ github.ref_name }}
+          APP_VERSION: ${{ needs.version-gate.outputs.version }}
           MAX_WAIT_MINUTES: "25"
         run: |
           # 写入 API Key 并设置路径供 Python 脚本使用
@@ -392,9 +410,8 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$KEY_PATH"
           export APP_STORE_CONNECT_KEY_PATH="$KEY_PATH"
 
-          # 清理版本号前缀 (v1.4.0 -> 1.4.0)
-          CLEAN_VERSION="${APP_VERSION#v}"
-          APP_VERSION="$CLEAN_VERSION" python3 scripts/submit-appstore-review.py MAC_OS
+          # APP_VERSION 已由 version-gate 从 version.json 解析(无 v 前缀)，直接透传
+          python3 scripts/submit-appstore-review.py MAC_OS
 
   ios:
     if: github.ref_name == 'appstore' || startsWith(github.ref, 'refs/tags/')
@@ -441,8 +458,8 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID_IOS }}
-          APP_VERSION: ${{ github.ref_name }}
-        run: python3 scripts/check-appstore-version.py IOS "${GITHUB_REF_NAME#v}"
+          APP_VERSION: ${{ needs.version-gate.outputs.version }}
+        run: python3 scripts/check-appstore-version.py IOS "$APP_VERSION"
 
       - name: Install Rust targets
         run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
@@ -863,7 +880,7 @@ jobs:
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID_IOS }}
-          APP_VERSION: ${{ github.ref_name }}
+          APP_VERSION: ${{ needs.version-gate.outputs.version }}
           # Apple 摄取延迟常见 30+ 分钟, 25 不够 (1.5.58 即因此超时)
           MAX_WAIT_MINUTES: "40"
         run: |
@@ -873,6 +890,5 @@ jobs:
           echo "$APP_STORE_CONNECT_API_KEY" | base64 --decode > "$KEY_PATH"
           export APP_STORE_CONNECT_KEY_PATH="$KEY_PATH"
 
-          # 清理版本号前缀 (v1.4.0 -> 1.4.0)
-          CLEAN_VERSION="${APP_VERSION#v}"
-          APP_VERSION="$CLEAN_VERSION" python3 scripts/submit-appstore-review.py IOS
+          # APP_VERSION 已由 version-gate 从 version.json 解析(无 v 前缀)，直接透传
+          python3 scripts/submit-appstore-review.py IOS
