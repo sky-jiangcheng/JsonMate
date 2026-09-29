@@ -1,6 +1,6 @@
 [package]
 name = "jsonmate"
-version = "1.5.78"
+version = "1.5.79"
 description = "JsonMate - 支持格式化、压缩、树形视图、对比和历史记录"
 authors = ["sky-jiangcheng"]
 license = "MIT"

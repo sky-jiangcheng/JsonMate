@@ -1,6 +1,6 @@
 {
   "name": "jsonmate",
-  "version": "1.5.78",
+  "version": "1.5.79",
   "description": "JsonMate - Tauri 桌面应用",
   "private": true,
   "scripts": {

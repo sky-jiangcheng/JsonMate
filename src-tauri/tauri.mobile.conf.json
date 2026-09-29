@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/nicedoc/master/web.json",
   "productName": "JsonMate",
-  "version": "1.5.78",
+  "version": "1.5.79",
   "identifier": "com.jsonmate.mobile",
   "build": {
     "frontendDist": "../dist",
