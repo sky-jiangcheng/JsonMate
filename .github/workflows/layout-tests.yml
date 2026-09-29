@@ -29,3 +29,7 @@ jobs:
       # ubuntu-latest 预装 Google Chrome (stable), playwright-core 走 channel:'chrome'
       - name: Run layout smoke tests
         run: node tests/layout.spec.mjs
+
+      # 输出区状态机与 diff 逻辑回归(错误页残留 / 原型键幻影行)
+      - name: Run output state regression tests
+        run: node tests/output-state.spec.mjs
