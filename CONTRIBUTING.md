@@ -102,20 +102,32 @@ sw.js                             → CACHE_NAME
 
 ## 5. 测试
 
-布局冒烟测试基于 Playwright，覆盖响应式断点、i18n 切换、主题与语言持久化。
+三个 spec 都基于 Playwright，走系统 Chrome（`chromium.launch({ channel: 'chrome' })`），
+**不需要** `npx playwright install`：
+
+| 文件 | 覆盖 |
+|---|---|
+| `tests/layout.spec.mjs` | 响应式断点、桌面/移动/窄窗布局、i18n 切换、主题与语言持久化、长文本滚动 |
+| `tests/output-state.spec.mjs` | 输出区状态机（解析错误页不残留）+ `diffJson` 原型键处理（源码级校验，无需浏览器） |
+| `tests/tauri-detection.spec.mjs` | Tauri 环境探测：只有 `__TAURI_INTERNALS__` / 旧 `__TAURI__` / 普通浏览器三种形态都判为 desktop |
 
 ```bash
 npm install
-npx playwright install chromium    # 首次需要
+node scripts/build.js              # 三个 spec 都读 dist/，必须先构建
 node tests/layout.spec.mjs
+node tests/output-state.spec.mjs
+node tests/tauri-detection.spec.mjs
 ```
 
-> 仓库**没有** `npm test` 脚本。CI 的 `Layout Smoke Tests` 工作流执行的也是上面这条命令。
+> 仓库**没有** `npm test` 脚本。CI 的 `Layout Smoke Tests` 工作流按上表顺序执行这三条命令 ——
+> 它是**逐文件写死**的，没有 glob：新增 spec 必须同时去 `.github/workflows/layout-tests.yml`
+> 加一行，否则测试永远不会被执行。
 
 **什么时候必须跑**：
 - 改动 `src/index.html` 的布局结构或内联样式
 - 改动 `src/styles.css` / `src/styles.mobile.css`
 - 改动 `src/app/router.js`（设备类型判定，直接决定断点行为）
+- 改动 `src/app/store.js` 的订阅者或 `renderOutput` / `renderErrorOutput` 链路
 - 改动 i18n 表或 `manifest.json`
 
 测试用 `data-*` 属性与计算样式断言，**不是**像素快照。改 UI 时若断言失败，先确认是回归还是断言本身该更新。
@@ -124,7 +136,8 @@ node tests/layout.spec.mjs
 
 ## 6. 脚本参考
 
-`scripts/` 下共 19 个脚本。**加脚本前先查下表，避免重复造轮子。**
+`scripts/` 下共 15 个脚本。**加脚本前先查下表，避免重复造轮子。**
+浏览器回归类脚本请放 `tests/*.spec.mjs`（见 §5），不要放 `scripts/`。
 
 ### 构建与版本
 
@@ -148,15 +161,6 @@ node tests/layout.spec.mjs
 | `gen-desktop-icon-bundles.js` | Windows ICO（256/48/32/16 多分辨率） |
 | `gen-ipad-portrait.py` | App Store iPad 竖屏两档（3:4）截屏 |
 
-### 调试与验证
-
-| 脚本 | 用途 |
-|---|---|
-| `reproduce-header-hide.js` | 复现 header 隐藏问题（构造特定 JSON 载荷） |
-| `check-statusbar.js` | 用 Playwright 检查状态栏渲染 |
-| `screenshot-statusbar.js` | 状态栏区域截图 |
-| `test-tauri-detection.js` | 验证 Tauri 环境探测（`__TAURI_INTERNALS__` / `innerWidth`） |
-
 ### App Store 上架
 
 | 脚本 | 用途 |
@@ -172,7 +176,7 @@ node tests/layout.spec.mjs
 - 主分支 `main`；发版走 `vX.Y.Z` tag 触发 CI 上架。
 - 提交信息用 conventional 风格：`feat:` / `fix:` / `chore:` / `docs:` / `refactor:`。
 - **不要提交**：构建产物（`dist/`、`src-tauri/target/`）、Pages 产物（手改的 `docs/`）、测试产物（`test-results/`）、密钥 / 证书 / provisioning profile。
-- 提交前跑 `npm run check:cdn` 与 `node tests/layout.spec.mjs`。
+- 提交前跑 `npm run check:cdn`，以及 §5 的三个 spec（`node scripts/build.js` 后逐个执行）。
 - 用 `git add <具体路径>`，**不要 `git add -A`** —— 仓库里有截图、调试脚本等本地文件，不应被顺手带入。
 
 ---

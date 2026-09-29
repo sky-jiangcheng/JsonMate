@@ -33,3 +33,7 @@ jobs:
       # 输出区状态机与 diff 逻辑回归(错误页残留 / 原型键幻影行)
       - name: Run output state regression tests
         run: node tests/output-state.spec.mjs
+
+      # Tauri 环境探测回归(关 withGlobalTauri 后仅剩 __TAURI_INTERNALS__ 的形态)
+      - name: Run Tauri detection tests
+        run: node tests/tauri-detection.spec.mjs
