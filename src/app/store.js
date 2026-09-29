@@ -14,6 +14,11 @@
     outputType: 'empty',   // 'empty' | 'text' | 'json'
     outputFixed: false,
     outputParsed: null,
+    // 输出区当前显示的是解析错误时为 { error, input }。
+    // 错误也必须走 store: 之前 renderErrorOutput 直接写 innerHTML 而不动
+    // output/outputType, 于是"格式化 A 成功 → 格式化失败(显示错误) → 改回 A
+    // 再格式化"会被订阅者的 _lastRenderContent 守卫判成"没变化", 错误页残留。
+    outputError: null,
     lang: localStorage.getItem('appLang') || 'en',
     theme: localStorage.getItem('theme') || 'light',
     selectedIds: [],
@@ -32,8 +37,8 @@
     _lastRenderType: 'empty',
     _lastRenderFixed: false,
     _lastRenderParsedObj: null,
+    _lastRenderError: null,
     _compareScrollController: null,
-    _platform: null, // Track current platform: 'desktop' | 'mobile' | 'ios' | 'android' | 'tauri'
   };
 
   var _subscribers = [];
@@ -43,11 +48,6 @@
   function setState(partial) {
     for (var key in partial) {
       if (partial.hasOwnProperty(key)) _state[key] = partial[key];
-    }
-    // Sync platform tracking to localStorage for persistence
-    if (partial._platform) {
-      localStorage.setItem('appPlatform', partial._platform);
-      _state._platform = partial._platform;
     }
     for (var i = 0; i < _subscribers.length; i++) _subscribers[i](_state);
   }

@@ -90,11 +90,16 @@
     if (contentEl) contentEl.onscroll = syncLineNumberScroll;
   }
 
-  function renderRegularOutput(content) {
+  function renderRegularOutput(content, parsedObj) {
     var area = document.getElementById('output-content-area');
     if (!area) return;
-    var obj;
-    try { obj = JSON.parse(content); } catch (e) { obj = null; }
+    // 优先复用 store 里已解析好的对象: format/minify 链路本来就 parse 过一遍,
+    // 这里再 JSON.parse 一次等于对超大 JSON 白付一次全树解析 + 一次字符串分配。
+    // parsedObj 为 null/undefined(例如从历史记录载入、只存了文本)时才回退到解析。
+    var obj = parsedObj;
+    if (obj === null || obj === undefined) {
+      try { obj = JSON.parse(content); } catch (e) { obj = null; }
+    }
     var treeHtml = obj !== null
       ? renderJsonNode(null, obj)
       : '<pre><code class="language-json hljs">' + _actions.escapeHtml(content) + '</code></pre>';
@@ -554,6 +559,8 @@
       outputType: type,
       outputFixed: !!fixed,
       outputParsed: parsedObj || null,
+      // 任何一次正常输出渲染都清掉错误态, 由订阅者负责把错误页换掉
+      outputError: null,
     };
     _store.setState(state);
   }
@@ -792,6 +799,14 @@
   // (如 {"a/b":1} vs {"a":{"b":1}}) 两条不同路径映射到同一个 map key, 高亮互相覆盖
   var PATH_SEP = '\u0000';
 
+  // 判键是否存在必须走自有属性: `key in obj` 会命中 Object.prototype 上的
+  // toString/valueOf/constructor 等, 于是 {"toString":...} 这类正常 JSON 会被
+  // 判成"两边都有该键", 取到 a['toString'] 是个函数, renderJsonNode 对函数
+  // 返回空串 → 整行凭空消失, 右侧还被标成 changed。
+  function hasOwnKey(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
   function diffJson(a, b) {
     if (a === b) return { t: 'same', v: a };
     var ta = typeof a, tb = typeof b;
@@ -819,8 +834,8 @@
     allKeys.sort();
     for (var i = 0; i < allKeys.length; i++) {
       var key = allKeys[i];
-      if (!(key in a)) { children.push({ k: key, d: { t: 'add', v: b[key] } }); hasDiff = true; }
-      else if (!(key in b)) { children.push({ k: key, d: { t: 'rem', v: a[key] } }); hasDiff = true; }
+      if (!hasOwnKey(a, key)) { children.push({ k: key, d: { t: 'add', v: b[key] } }); hasDiff = true; }
+      else if (!hasOwnKey(b, key)) { children.push({ k: key, d: { t: 'rem', v: a[key] } }); hasDiff = true; }
       else { var cd = diffJson(a[key], b[key]); children.push({ k: key, d: cd }); if (cd.t !== 'same') hasDiff = true; }
     }
     return hasDiff ? { t: 'obj', c: children } : { t: 'same', v: a };
@@ -1214,7 +1229,7 @@
       var selectedIds = _store.getStateForKey('selectedIds') || [];
       var result = _actions.deleteHistory(history, id, selectedIds);
       if (!persistHistory(result.history)) return true;
-      _store.setState({ selectedIds: result.selectedIds, _platform: Platform.getPlatform() });
+      _store.setState({ selectedIds: result.selectedIds });
       if (_store.getStateForKey('loadedHistoryId') === id) {
         _store.setState({ loadedHistoryId: null });
       }
@@ -1227,7 +1242,7 @@
       var sid = checkbox.dataset.selectId;
       var sel = _store.getStateForKey('selectedIds') || [];
       var newSel = _actions.toggleSelect(sel, sid);
-      _store.setState({ selectedIds: newSel, _platform: Platform.getPlatform() });
+      _store.setState({ selectedIds: newSel });
       renderHistory();
       return true;
     }
@@ -1252,7 +1267,7 @@
         }
         if (_router.isMobileDevice()) toggleSidebar();
         showToast(_i18n.t('loaded', { name: loaded.name }), 2000, 'icon-file-text');
-        _store.setState({ loadedHistoryId: hid, _platform: Platform.getPlatform() });
+        _store.setState({ loadedHistoryId: hid });
       } else {
         // 老版本记录字段不兼容 / 内容为空 → 友好提示不静默失败
         var name = loaded && loaded.name ? loaded.name : (_i18n.t('untitled') || 'untitled');
@@ -1383,7 +1398,9 @@
       overlay.classList.remove('active');
       var file = e.dataTransfer.files[0];
       if (!file) return;
-      if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+      // 后缀判断大小写不敏感: macOS 上 .JSON / .Json 文件很常见,
+      // 而这类文件拖进来时 MIME 常常是空或 application/octet-stream
+      if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
         showToast(_i18n.t('jsonOnly'), 3000, 'icon-alert-triangle');
         return;
       }
@@ -1524,6 +1541,13 @@
      Error rendering
   ============================================================== */
   function renderErrorOutput(error, input) {
+    // 错误态必须进 store。之前这里直接写 area.innerHTML 而不动 output/outputType,
+    // 于是"格式化 A 成功 → 改坏格式化失败(显示错误) → 改回 A 再格式化成功"时,
+    // 订阅者按 _lastRenderContent 判定"输出没变"而跳过重绘, 页面停在错误视图。
+    _store.setState({ outputError: { error: error, input: input } });
+  }
+
+  function drawErrorDisplay(error, input) {
     var msg = getFriendlyJsonError(error, input);
     var posMatch = error.message.match(/position\s+(\d+)/i);
     var pos = posMatch ? parseInt(posMatch[1]) : -1;
@@ -1908,7 +1932,12 @@
     var type = _store.getStateForKey('outputType') || 'empty';
     var fixed = _store.getStateForKey('outputFixed') || false;
     var parsed = _store.getStateForKey('outputParsed') || null;
-    if (output) {
+    var err = _store.getStateForKey('outputError');
+    if (err) {
+      // 错误标题/规则提示都是本地化的, 换语言后按新语言重画错误页
+      _store.setState({ _lastRenderError: null });
+      renderErrorOutput(err.error, err.input);
+    } else if (output) {
       // Force a re-render: the store subscriber guards on _lastRenderContent,
       // so reset it to bypass the guard and let the JSON tree re-localize its
       // "N items"/"N keys" labels under the new language.
@@ -1951,29 +1980,41 @@
     // format/minify/stringify -> renderOutput() 只 setState,
     // 这里检测 output 状态变化后真正渲染 DOM, 保证状态与视图永远同步
     _store.subscribe(function (state) {
-      if (state.output !== state._lastRenderContent || state.outputType !== state._lastRenderType) {
-        // 先打标记再渲染: 渲染函数内部的 renderLineNumbers 等会触发 setState,
-        // 重入此订阅者时变更检测不再成立, 避免无限递归
-        _store.setState({
-          _lastRenderContent: state.output,
-          _lastRenderType: state.outputType,
-          _lastRenderFixed: state.outputFixed,
-          _lastRenderParsedObj: state.outputParsed,
-        });
-        if (!state.output || state.outputType === 'empty') {
-          renderEmptyContent();
-        } else if (state.outputType === 'text') {
-          renderTextOutput(state.output);
-        } else {
-          renderRegularOutput(state.output);
-        }
-        // 移动端: 仅在输出真正变化时切到 output tab（避免每次 setState 都切）
-        if (state.outputType && state.outputType !== 'empty' && _router.isMobileDevice()) {
-          switchMobileTab('output');
-        }
-        // 输出已重建: 刷新搜索高亮, 防止存储的 <mark> 节点失效
-        restoreSearchHighlights();
+      var errChanged = state.outputError !== state._lastRenderError;
+      var outChanged = state.output !== state._lastRenderContent
+        || state.outputType !== state._lastRenderType;
+
+      if (state.outputError) {
+        if (!errChanged) return;
+        // 同样是先打标记再渲染, 避免下面 drawErrorDisplay 内部的 setState 重入
+        _store.setState({ _lastRenderError: state.outputError });
+        drawErrorDisplay(state.outputError.error, state.outputError.input);
+        if (_router.isMobileDevice()) switchMobileTab('output');
+        return;
       }
+      if (!errChanged && !outChanged) return;
+      // 先打标记再渲染: 渲染函数内部的 renderLineNumbers 等会触发 setState,
+      // 重入此订阅者时变更检测不再成立, 避免无限递归
+      _store.setState({
+        _lastRenderContent: state.output,
+        _lastRenderType: state.outputType,
+        _lastRenderFixed: state.outputFixed,
+        _lastRenderParsedObj: state.outputParsed,
+        _lastRenderError: null,
+      });
+      if (!state.output || state.outputType === 'empty') {
+        renderEmptyContent();
+      } else if (state.outputType === 'text') {
+        renderTextOutput(state.output);
+      } else {
+        renderRegularOutput(state.output, state.outputParsed);
+      }
+      // 移动端: 仅在输出真正变化时切到 output tab（避免每次 setState 都切）
+      if (state.outputType && state.outputType !== 'empty' && _router.isMobileDevice()) {
+        switchMobileTab('output');
+      }
+      // 输出已重建: 刷新搜索高亮, 防止存储的 <mark> 节点失效
+      restoreSearchHighlights();
     });
   }
 
