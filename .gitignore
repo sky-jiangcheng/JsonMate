@@ -27,6 +27,21 @@ windows-nsis-v*/
 tauri-ios-ipa-v*/
 screenshots/*.json
 
+# ---- Python / 测试运行残留 ----
+__pycache__/
+*.pyc
+test-results/
+.zcode/
+
+# ---- AI 代理本地工作文件（个人上下文, 不入库）----
+AGENTS.md
+MEMORY.md
+memory/
+
+# ---- 调试复现截图（一次性脚本产物, 区别于下面的文档截图源）----
+screenshots/header-hide-*.png
+screenshots/statusbar-check.png
+
 # ---- 截图源（保留）vs 生成包（忽略）----
 # screenshots/ 为原始截屏源，纳入版本控制
 # 其下各 *-screenshots/ 包由 scripts/ 生成，已忽略
