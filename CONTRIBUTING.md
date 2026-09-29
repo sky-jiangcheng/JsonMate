@@ -1,8 +1,21 @@
 # 项目规范（CONTRIBUTING）
 
-Advanced JSON Formatter Tool — 本地优先的 Advanced JSON Formatter（Tauri v2 桌面 + iOS + 网页）。
+Advanced JSON Formatter — 本地优先的 JSON 格式化 / 验证 / 对比工具（Tauri v2 桌面 + iOS + 网页）。
 
-本文件定义目录归属、构建链路、资源/版本/提交约定，避免「文件散落、重复副本、源真值不清」。
+本文件定义目录归属、构建链路、测试、版本与提交约定，避免「文件散落、重复副本、源真值不清」。
+
+---
+
+## 目录
+
+1. [目录结构与归属](#1-目录结构与归属)
+2. [构建与部署链路](#2-构建与部署链路)
+3. [资源规范](#3-资源规范)
+4. [版本规范](#4-版本规范)
+5. [测试](#5-测试)
+6. [脚本参考](#6-脚本参考)
+7. [提交与分支约定](#7-提交与分支约定)
+8. [CI 注意事项（踩坑记录）](#8-ci-注意事项踩坑记录)
 
 ---
 
@@ -10,18 +23,23 @@ Advanced JSON Formatter Tool — 本地优先的 Advanced JSON Formatter（Tauri
 
 | 路径 | 角色 | 是否入库 |
 |---|---|---|
-| `src/index.html` | **网页应用唯一源码真源**（单文件应用） | ✅ 源码 |
+| `src/` | **网页应用唯一源码真源**（多模块，见下） | ✅ 源码 |
+| `src/app/` | 业务逻辑模块（`store` / `actions` / `render` / `router`），构建时合并进 `dist/app.js` | ✅ 源码 |
 | 根目录 `highlight*.{js,css}` / `icon-*.png` / `icon.svg` / `manifest.json` / `sw.js` | 网页静态资源（构建时拷入 `dist/`、`docs/`） | ✅ 源码 |
 | `docs/` | GitHub Pages **生成产物**（由 `pages.yml` 从 `src/` 生成并提交） | ⚠️ 自动生成，勿手改 |
-| `dist/` | Tauri 构建产物（`build.js` 生成） | ❌ 已忽略 |
+| `dist/` | 网页构建产物（`build.js` 生成） | ❌ 已忽略 |
 | `src-tauri/` | Rust 后端 + 桌面/iOS/AppStore 配置 + 图标 | ✅ 源码 |
-| `scripts/` | 构建 / CI / 上架辅助脚本 | ✅ 源码 |
-| `screenshots/` | App Store 截屏**源文件** | ✅ 源码 |
-| `appstore-screenshots/` `ipad-screenshots/` | 截屏**交付包**（脚本生成） | ❌ 已忽略 |
-| `.monkeycode/docs/` | 项目文档（里程碑、优化指南、开发日志、审核回复、隐私政策） | ✅ 源码 |
-| `.workbuddy/` | 本地工具目录 | ❌ 已忽略 |
+| `src-tauri/gen/apple/` | Xcode 工程（由 `tauri ios init` 生成） | ❌ 自动生成 |
+| `src-tauri/target/` | Rust 构建产物 | ❌ 已忽略 |
+| `scripts/` | 构建 / 版本 / 图标 / 上架脚本（19 个，见 §6） | ✅ 源码 |
+| `tests/` | 布局冒烟测试 | ✅ 源码 |
+| `screenshots/` | 截图**源文件**（`phone/`、`ipad-portrait/`） | ✅ 源码 |
+| `.monkeycode/docs/` | 项目内部文档（里程碑、优化指南、开发日志、审核回复） | ✅ 源码 |
+| `test-results/` | Playwright 截图产物 | ❌ 已忽略 |
 
-> **铁律**：`src/index.html` 是网页唯一真源。根目录 `index.html`、`docs/index.html` 都不是源（前者为漂移孤儿已删除，后者为生成产物）。
+> **铁律 1**：`src/` 是网页唯一真源。`docs/` 下的任何文件都不是源。
+>
+> **铁律 2**：源码是多模块的（`src/app/` 下 4 个文件 + `src/app.js`），但构建产物是**单文件** `dist/app.js` —— 由 `scripts/build.js` 合并产生。改代码请改 `src/`，不要改 `dist/` 或 `docs/`。
 
 ---
 
@@ -29,56 +47,143 @@ Advanced JSON Formatter Tool — 本地优先的 Advanced JSON Formatter（Tauri
 
 | 目标 | 命令 / 触发 | 源 → 产物 |
 |---|---|---|
-| 桌面 dist | `npm run build:dist` → `scripts/build.js` | `src/index.html` + 根静态资源 → `dist/` |
-| GitHub Pages | push `main` → `pages.yml` | `src/index.html` → `docs/`（自动提交） |
-| App Store（macOS/iOS） | 打 `v*` tag → `release.yml` | 全仓 → IPA / PKG，上传 ASC |
+| 网页 dist | `npm run build:dist` → `scripts/build.js` | `src/` + 根静态资源 → `dist/`（`src/app/*` 合并为单个 `app.js`） |
+| GitHub Pages | push `main` → `pages.yml` | `src/` → `docs/`（CI 自动提交） |
+| 桌面 / iOS 发布 | push `v*` tag → `release.yml` | 全仓 → 安装包 / IPA / PKG，上传 App Store |
 
 **规则**：
-- 改网页只动 `src/index.html` 和根静态资源，不要手改 `docs/`（会被下次部署覆盖）。
-- 静态资源（highlight、图标）**只保留一份在根目录**，构建脚本负责拷贝，禁止在 `docs/`、`lib/` 等多处复制。
+- 改网页只动 `src/` 和根静态资源，不要手改 `docs/`（`pages.yml` 会 `rm -rf docs` 后重建）。
+- 静态资源（highlight、图标）**只保留一份在根目录**，构建脚本负责拷贝，禁止在多处复制。
+- `npm run preview` 是 `python3 -m http.server 8000`，服务**仓库根目录** —— 网页版应用在 `/src/`，构建产物在 `/dist/`。
 
 ---
 
 ## 3. 资源规范
 
 - **单一真源**：同一种资源（库、图标、截图源）只存一处，靠构建/脚本分发，不手动复制成多份。
-- **命名**：文件名拼写须正确（如 `Entitlements.plist`、`debug.xcconfig`）；临时/一次性脚本用下划线前缀（如 `_tmp.py`），转正时去掉前缀。
-- **死代码**：未被任何文件引用的目录/文件（例：曾有的 `lib/highlight/`）直接删除，不留「以后可能用」。
-- **截图**：原始截屏进 `screenshots/`，交付包由 `scripts/` 生成并忽略，不入库。
+- **命名**：文件名拼写须正确（如 `Entitlements.plist`、`Info.ios.plist`）；临时/一次性脚本用下划线前缀（如 `_tmp.py`），转正时去掉前缀。
+- **死代码**：未被任何文件引用的目录/文件直接删除，不留「以后可能用」。提交前用 `git status` 确认没有把临时产物带进来。
+- **截图**：原始截屏进 `screenshots/`，交付包由 `scripts/` 生成，不入库。
 
 ---
 
 ## 4. 版本规范
 
-**四处**版本号**必须一致**（CI `check-versions.js` 校验全部 4 处）：
+**`version.json` 是版本号唯一真源。**
+
+| 脚本 | 覆盖范围 | 何时运行 |
+|---|---|---|
+| `npm run bump <ver>` | 写 `version.json` + 同步 **7 个文件** | 手动，发版时 |
+| `node scripts/sync-versions.js` | 同步 **7 个文件** | `bump` / `build.js` 内部自动调用 |
+| `node scripts/check-versions.js check` | 校验 **5 个文件** | CI `version-gate` 作业 |
+| `node scripts/check-versions.js tag <v>` | tag 与 **5 个文件**逐一比对 | 仅 `v*` tag 触发 |
+
+`sync-versions.js` 同步的 7 个文件：
 
 ```
-package.json              → "version"
-src-tauri/tauri.conf.json → "version"
-src-tauri/Cargo.toml      → version
-sw.js                     → CACHE_NAME
+package.json                      → "version"
+src-tauri/Cargo.toml              → version
+src-tauri/Cargo.lock              → advanced-json-formatter 包的 version
+src-tauri/tauri.conf.json         → "version"
+src-tauri/tauri.appstore.conf.json→ "version"
+src-tauri/tauri.ios.conf.json     → "version"
+sw.js                             → CACHE_NAME
 ```
 
-- 发版打 `vX.Y.Z` tag，tag 版本号必须等于上述文件版本（否则 CI `version-gate` 拒绝）。
-- 升版本用 `npm run bump`（自动同步全部 4 处），不要手改单处。
-- **构建号 ≠ 商店版本号**：`APP_VERSION`（如 1.5.11）是构建号用于匹配 build；商店版本是 marketing version（如 1.0），提交脚本按 marketing version 选版本（详见 §6.7）。iOS 商店版本继承 `tauri.conf.json`（Tauri iOS），无独立 `ios/` 工程。
+`check-versions.js` 校验 `version.json` / `package.json` / `tauri.conf.json` / `Cargo.toml` / `sw.js` 五处。**`version.json` 必须在清单里**：`build.js` 以它为源反向覆写其余文件，若门禁只比对被覆写的那几处，手工改齐它们却漏改 `version.json` 时检查会通过，而构建会把版本静默改回旧值再上传 App Store。
+
+**规则**：
+- 升版本只用 `npm run bump`，**不要手改单处**。
+- 发版打 `vX.Y.Z` tag，tag 版本号必须等于文件版本（否则 CI `version-gate` 拒绝）。
+- `package-lock.json` **不在同步范围内**，其 `version` 字段会滞后于 `package.json`，属已知现象。
+- **构建号 ≠ 商店版本号**：`APP_VERSION`（如 1.5.11）是构建号用于匹配 build；商店版本是 marketing version（如 1.0），提交脚本按 marketing version 选版本（详见 §8.7）。
 
 ---
 
-## 5. 提交与分支约定
+## 5. 测试
+
+布局冒烟测试基于 Playwright，覆盖响应式断点、i18n 切换、主题与语言持久化。
+
+```bash
+npm install
+npx playwright install chromium    # 首次需要
+node tests/layout.spec.mjs
+```
+
+> 仓库**没有** `npm test` 脚本。CI 的 `Layout Smoke Tests` 工作流执行的也是上面这条命令。
+
+**什么时候必须跑**：
+- 改动 `src/index.html` 的布局结构或内联样式
+- 改动 `src/styles.css` / `src/styles.mobile.css`
+- 改动 `src/app/router.js`（设备类型判定，直接决定断点行为）
+- 改动 i18n 表或 `manifest.json`
+
+测试用 `data-*` 属性与计算样式断言，**不是**像素快照。改 UI 时若断言失败，先确认是回归还是断言本身该更新。
+
+---
+
+## 6. 脚本参考
+
+`scripts/` 下共 19 个脚本。**加脚本前先查下表，避免重复造轮子。**
+
+### 构建与版本
+
+| 脚本 | 用途 |
+|---|---|
+| `build.js` | 把 `src/app/{router,store,actions,render}.js` + `src/app.js` 合并为单个 `dist/app.js`，并拷贝静态资源 |
+| `bump-version.js` | 写 `version.json` 并同步全部 9 个版本文件（`npm run bump`） |
+| `sync-versions.js` | 同步/校验 8 个版本文件，含 `Cargo.lock` 精准改写 |
+| `check-versions.js` | CI 版本一致性校验（4 个关键文件） |
+| `bump-build.js` | 递增 App Store 构建号 |
+| `pre-commit-check.js` | 提交前检查（`npm run check:cdn`，校验无外部 CDN 引用） |
+
+### 图标
+
+| 脚本 | 用途 |
+|---|---|
+| `generate-icons.js` | 桌面 / Tauri 图标 |
+| `generate-extra-icons.js` | 根目录 favicon 等额外尺寸 |
+| `gen-icon-v2.js` | 黑色调图标方案 |
+| `gen-icon-variants.js` | 多配色变体（蓝→青渐变等） |
+| `gen-desktop-icon-bundles.js` | Windows ICO（256/48/32/16 多分辨率） |
+| `gen-ipad-portrait.py` | App Store iPad 竖屏两档（3:4）截屏 |
+
+### 调试与验证
+
+| 脚本 | 用途 |
+|---|---|
+| `reproduce-header-hide.js` | 复现 header 隐藏问题（构造特定 JSON 载荷） |
+| `check-statusbar.js` | 用 Playwright 检查状态栏渲染 |
+| `screenshot-statusbar.js` | 状态栏区域截图 |
+| `test-tauri-detection.js` | 验证 Tauri 环境探测（`__TAURI_INTERNALS__` / `innerWidth`） |
+
+### App Store 上架
+
+| 脚本 | 用途 |
+|---|---|
+| `build-appstore.sh` | macOS App Store 构建与上传编排 |
+| `check-appstore-version.py` | 查询 ASC 版本与构建状态（ES256 JWT，注意 DER→raw 转换，见 §8.1） |
+| `submit-appstore-review.py` | 提交审核（`reviewSubmissions` 新流程，见 §8.10） |
+
+---
+
+## 7. 提交与分支约定
 
 - 主分支 `main`；发版走 `vX.Y.Z` tag 触发 CI 上架。
 - 提交信息用 conventional 风格：`feat:` / `fix:` / `chore:` / `docs:` / `refactor:`。
-- 不要提交：构建产物（`dist/`）、Pages 产物（`docs/` 手改）、截屏交付包、`.workbuddy/`、密钥/证书。
+- **不要提交**：构建产物（`dist/`、`src-tauri/target/`）、Pages 产物（手改的 `docs/`）、测试产物（`test-results/`）、密钥 / 证书 / provisioning profile。
+- 提交前跑 `npm run check:cdn` 与 `node tests/layout.spec.mjs`。
+- 用 `git add <具体路径>`，**不要 `git add -A`** —— 仓库里有截图、调试脚本等本地文件，不应被顺手带入。
 
 ---
 
-## 6. CI 注意事项（踩坑记录）
+## 8. CI 注意事项（踩坑记录）
 
 - `release.yml` 的 `if:` 条件**禁止引用 `secrets` 上下文**，需用 `env.*`（先在步骤 `env:` 把 secret 转成 env 变量再判）。
 - `pages.yml` 每次部署先 `rm -rf docs` 再重建，`docs/` 的内容以 `src/` 为准。
+- GitHub re-run 失败 job 用的是 **tag commit 上的旧 workflow / 脚本**。脚本修复后必须**删远程 tag 重打**（`git push origin :refs/tags/vX.Y.Z` → `git tag vX.Y.Z` → `git push origin vX.Y.Z`）才会用新代码。
 
-### 6.1 🔴 App Store Connect API 鉴权（核心坑：JWT 签名格式）
+### 8.1 🔴 App Store Connect API 鉴权（核心坑：JWT 签名格式）
 
 `release.yml` 上架 macOS/iOS 时，`scripts/check-appstore-version.py` 与 `scripts/submit-appstore-review.py` 会调用 Apple App Store Connect API，用 **ES256 JWT** 鉴权。
 
@@ -98,7 +203,7 @@ jwt = f"{signing_input}.{sig_b64}"
 
 > 历史上 1.5.0~1.5.4 连续多版被 401 卡住，反复怀疑密钥/Issuer 配置，最终定位是脚本漏了上面这步转换——**与密钥是否有效无关**。
 
-### 6.2 ASC API 不支持的参数（`sort` / 400 PARAMETER_ERROR）
+### 8.2 ASC API 不支持的参数（`sort` / 400 PARAMETER_ERROR）
 
 **症状**：`submit-appstore-review.py` 的「等待构建处理」步骤反复报 HTTP 400：
 
@@ -110,14 +215,14 @@ jwt = f"{signing_input}.{sig_b64}"
 
 **修法**：去掉 `?sort=-uploadedDate`，在 Python 端排序返回结果即可。
 
-### 6.3 如何区分「密钥问题」还是「代码问题」（401 调试法）
+### 8.3 如何区分「密钥问题」还是「代码问题」（401 调试法）
 
 CI 报 401 时，**先本地验证凭证本身**，避免盲改 GitHub secret：
 
 1. 用 `openssl` 对 `.p8` 签名（openssl 默认输出 raw，无需 DER 转换），生成 JWT 后 `curl https://api.appstoreconnect.apple.com/v1/apps`；返回 **200** 即证明 `Key ID + Issuer + .p8` 三者有效且匹配 → 401 必是代码侧签名格式问题。
 2. `check-appstore-version.py` 内置 `[DIAG]` 打印（ISSUER / KEY_ID / KEY_FILE 头 / JWT payload），CI 日志里可直接核对这些参数是否被正确读取、文件路径是否完整。
 
-### 6.4 `appstore` 环境 secret 配置
+### 8.4 `appstore` 环境 secret 配置
 
 `release.yml` 的 `macos-appstore` / `ios` 作业带 `environment: appstore`，**优先取环境级 secret**（不是仓库级）。
 
@@ -133,7 +238,7 @@ CI 报 401 时，**先本地验证凭证本身**，避免盲改 GitHub secret：
 
 > 注意区分三个 ID：`App ID`（纯数字，App 自身）、`Issuer ID`（UUID，密钥页顶部）、`Key ID`（字母数字，钥匙文件名）——401 调试时别搞混。
 
-### 6.5 创建 App Store 版本报 409（App 当前状态不允许）
+### 8.5 创建 App Store 版本报 409（App 当前状态不允许）
 
 `submit-appstore-review.py` 的 `get_or_create_version` 早期用 `filter[versionString]=X&filter[platform]=IOS` 组合查询，再决定创建。v1.5.6 的 `ios` job 在此踩到：
 
@@ -158,7 +263,7 @@ HTTP 409: {"code":"ENTITY_ERROR.RELATIONSHIP.INVALID",
 - 若目标版本号（如 1.5.6）已存在且处于 `PREPARE_FOR_SUBMISSION` 等可编辑态 → 多半只是过滤器漏查，**直接手动点 Submit for Review** 即可，不必重建。
 - 若存在一个**别的版本号**占着可编辑位 → 先在 ASC 里把它「拒绝 / 删除」，再重跑 CI 的 `ios` job（注意：需先把本修复提交进**触发 CI 的 ref**，否则重跑用的还是旧脚本）。
 
-### 6.6 提交审核报 403：REJECTED 版本残留 appStoreVersionSubmission
+### 8.6 提交审核报 403：REJECTED 版本残留 appStoreVersionSubmission
 
 **症状**：`submit-appstore-review.py` 走到 `POST /v1/appStoreVersionSubmissions` 报：
 
@@ -173,15 +278,15 @@ HTTP 409: {"code":"ENTITY_ERROR.RELATIONSHIP.INVALID",
 
 > 关键：此 403 发生在「关联构建」**之后**，意味着 build 已上传+挂到版本，最耗时的环节已完成。**不必重跑 CI 重建**，补完 2.1 资料后 ASC UI 手动 Submit 即可。
 
-### 6.7 脚本把「构建号」当「商店版本号」查 → 永远 409
+### 8.7 脚本把「构建号」当「商店版本号」查 → 永远 409
 
 **症状**：CI 长期每次提交都 409，只能手动在 ASC 挂 build。
 
-**根因**：`submit-appstore-review.py` 旧逻辑用 `APP_VERSION`（**构建号**，如 `1.5.11`）去查 App Store `versionString`，而商店版本是 **marketing version**（如 `1.0`）→ 永远查不到 → 每次都 POST 创建新版本 → 永远 409（见 §6.5）。
+**根因**：`submit-appstore-review.py` 旧逻辑用 `APP_VERSION`（**构建号**，如 `1.5.11`）去查 App Store `versionString`，而商店版本是 **marketing version**（如 `1.0`）→ 永远查不到 → 每次都 POST 创建新版本 → 永远 409（见 §8.5）。
 
 **修复**（commit `34ebef5`）：`get_submission_version` 按 **marketing version** 查找/自动选当前可编辑版本（排除已上架，取最大），支持可选 `APP_STORE_VERSION` 精确指定；`wait_for_build` 按**构建号**精确匹配 VALID build。**概念必须分清：构建号 ≠ 商店版本号。**
 
-### 6.8 🔴 iOS 上线默认图标（多轮修复无效的根因：CI 步骤顺序）
+### 8.8 🔴 iOS 上线默认图标（多轮修复无效的根因：CI 步骤顺序）
 
 **症状**：App Store 上架的 iOS 包始终是 Tauri 默认图标，改 `bundle.icon`、补 1024px 图标、`removeAlpha` 等多轮修复全部无效。
 
@@ -196,7 +301,7 @@ CI 原顺序是「先生成图标、后 `ios init`」→ init 用默认图标重
 
 **排查手法备忘**：`strings` 提取 `@tauri-apps/cli` 二进制确认内嵌 appiconset 模板与 `ios_out.exists()` 回退分支；对照 tauri 源码 `crates/tauri-cli/src/icon.rs` 证实；本地 `tauri icon` 实测 gen/apple 不存在时确实只写 `icons/ios/`。
 
-### 6.9 🔴 旧版本在审中导致新版本创建 409（supersede 自动撤审）
+### 8.9 🔴 旧版本在审中导致新版本创建 409（supersede 自动撤审）
 
 **症状**：新 tag 的 `ios` job 在「查找当前可提交版本」阶段报 `HTTP 409 ENTITY_ERROR.RELATIONSHIP.INVALID: You cannot create a new version of the App in the current state`，并列出某版本 `state=WAITING_FOR_REVIEW`。
 
@@ -212,7 +317,7 @@ CI 原顺序是「先生成图标、后 `ios init`」→ init 用默认图标重
 
 **重跑注意**：GitHub re-run 失败 job 用的是 **tag commit 上的旧 workflow/脚本**。脚本修复后必须**删远程 tag 重打**（`git push origin :refs/tags/vX.Y.Z` → `git tag vX.Y.Z` → `git push origin vX.Y.Z`）才会用新代码。
 
-### 6.10 🔴 appStoreVersionSubmissions 已废弃：撤审后重提必 403（reviewSubmissions 新流程）
+### 8.10 🔴 appStoreVersionSubmissions 已废弃：撤审后重提必 403（reviewSubmissions 新流程）
 
 **症状**（v1.5.54）：supersede 撤审后复用版本位，提审时报 `HTTP 403: The resource 'appStoreVersionSubmissions' does not allow 'CREATE'. Allowed operation is: DELETE`。同时：
 
@@ -228,7 +333,7 @@ CI 原顺序是「先生成图标、后 `ios init`」→ init 用默认图标重
 3. **复用版本位时同步版本号**：可编辑状态复用分支补 PATCH `versionString` 为本次构建号——否则撤审复用的版本会滞留旧号（1.5.52 的版本位挂着 1.5.54 的 build）。
 4. **删除"删版本重试"兜底**：Apple 禁删有 build 的版本，该分支永远 409，只留崩溃栈。
 
-### 6.11 🔴 出口合规：别创建 appEncryptionDeclarations（5 个上限 + 检查端点 404）
+### 8.11 🔴 出口合规：别创建 appEncryptionDeclarations（5 个上限 + 检查端点 404）
 
 **症状**（v1.5.54）：`HTTP 409 STATE_ERROR.APP_ENCRYPTION_DECLARATIONS_LIMIT_REACHED: There are already 5 appEncryptionDeclarations in review`。
 
