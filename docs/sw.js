@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jsonmate-v1.5.76';
+const CACHE_NAME = 'jsonmate-v1.5.78';
 const urlsToCache = [
   './',
   './index.html',
