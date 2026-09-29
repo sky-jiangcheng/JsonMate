@@ -621,9 +621,9 @@ previousBundleVersion: 1.4.0
 **现象**：iOS archive 失败：
 
 ```
-Provisioning profile "jsonnest-ios-appstore" has app ID
-"com.jsonnest.desktop.appstore", which does not match the bundle ID
-"com.jsonnest.desktop.appstore.ios"
+Provisioning profile "<Profile 名称>" has app ID
+"com.jsonbeautify.desktop.appstore", which does not match the bundle ID
+"com.jsonbeautify.desktop.appstore.ios"
 ```
 
 **根因**：macOS 和 iOS 共用同一个 Apple Developer 账号，但 Bundle ID 必须区分。Bundle ID 改了之后，App Store Distribution Profile 没有同步重新生成。
@@ -901,7 +901,7 @@ name = "app_lib"
 ```bash
 # 将 iPhone Developer 改为 iPhone Distribution
 sed -i '' 's|CODE_SIGN_IDENTITY = "iPhone Developer"|CODE_SIGN_IDENTITY = "iPhone Distribution"|g' \
-  src-tauri/gen/apple/project.jsonnest.xcodeproj/project.pbxproj
+  src-tauri/gen/apple/advanced-json-formatter.xcodeproj/project.pbxproj
 ```
 
 ### 8.5 Provisioning Profile UUID 注入
@@ -929,31 +929,56 @@ import re, sys
 <dict>
     <key>method</key>
     <string>app-store</string>
+    <key>teamID</key>
+    <string>${APPLE_TEAM_ID}</string>
     <key>provisioningProfiles</key>
     <dict>
         <key>com.jsonbeautify.desktop.appstore.ios</key>
-        <string>jsonnest-ios-appstore</string>
+        <string>${PROFILE_NAME}</string>
     </dict>
-    <key>teamID</key>
-    <string>M3A6LK593A</string>
+    <key>signingStyle</key>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>iPhone Distribution</string>
 </dict>
 </plist>
 ```
 
+`${APPLE_TEAM_ID}` 和 `${PROFILE_NAME}` 都是 shell 变量，由 workflow 写文件时展开：
+`APPLE_TEAM_ID` 来自 secrets，`PROFILE_NAME` 从 `security cms -D` 解析 `.mobileprovision`
+的 `Name` 字段得到（见 8.5），不要在这里硬编码 profile 名。
+
 ### 8.7 iOS 构建 CI 流程
 
+对应 `.github/workflows/release.yml` 的 `Build iOS archive` 与 `Export IPA` 两步。
+archive 路径不硬编码，用 `find` 发现并在找不到时熔断 —— 产物名带架构和版本后缀，写死会随构建配置失效：
+
 ```yaml
-- name: Build iOS
+- name: Build iOS archive
   run: |
-    npm run tauri ios build -- --archive-only
-    # 修复 archive 中的签名配置
-    # ...
+    npx tauri ios build \
+      --target aarch64 \
+      --config src-tauri/tauri.ios.conf.json \
+      --ci \
+      --archive-only
+    ARCHIVE=$(find src-tauri/gen/apple/build -name "*.xcarchive" -type d | head -1)
+    if [ -z "$ARCHIVE" ]; then
+      echo "::error::未找到 xcarchive"
+      exit 1
+    fi
+
+- name: Export IPA
+  run: |
+    ARCHIVE=$(find src-tauri/gen/apple/build -name "*.xcarchive" -type d | head -1)
     xcodebuild -exportArchive \
-      -archivePath "src-tauri/gen/apple/build/arm64/jsonnest.xcarchive" \
-      -exportPath "src-tauri/gen/apple/build/arm64/export" \
-      -exportOptionsPlist "exportOptions.plist" \
-      PROVISIONING_PROFILE="jsonnest-ios-appstore"
+      -archivePath "$ARCHIVE" \
+      -exportPath src-tauri/gen/apple/build \
+      -exportOptionsPlist src-tauri/gen/apple/export/exportOptions.plist \
+      -allowProvisioningUpdates
 ```
+
+签名 profile 由 8.5 注入 `pbxproj`，导出时再由 `exportOptions.plist` 指定；
+`xcodebuild -exportArchive` 不接受 `PROVISIONING_PROFILE` 参数，不要往命令行上追加。
 
 ### 8.8 Provisioning Profile 映射到证书
 
@@ -1286,10 +1311,10 @@ Safari浏览器打不开该网页，因为已丢失网络连接
 
 ```bash
 curl -sv -H "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15" \
-  "https://sky-jiangcheng.github.io/JsonNest/" 2>&1
+  "https://sky-jiangcheng.github.io/advanced-json-formatter/" 2>&1
 
 curl -s -o /dev/null -w "HTTP %{http_code}\nSize: %{size_download}\nTime: %{time_total}s\nSSL: %{ssl_verify_result}\n" \
-  "https://sky-jiangcheng.github.io/JsonNest/"
+  "https://sky-jiangcheng.github.io/advanced-json-formatter/"
 ```
 
 检查清单：

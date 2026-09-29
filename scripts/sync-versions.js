@@ -6,7 +6,7 @@
    覆盖文件与 v1.5.59 时代手动 bump 的清单一致：
      - package.json
      - src-tauri/Cargo.toml
-     - src-tauri/Cargo.lock   (仅 jsonmate 包条目)
+     - src-tauri/Cargo.lock   (仅 advanced-json-formatter 包条目)
      - src-tauri/tauri.conf.json
      - src-tauri/tauri.desktop.conf.json
      - src-tauri/tauri.mobile.conf.json
@@ -62,13 +62,13 @@ function main() {
     patchVersionedString('src-tauri/tauri.ios.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
     patchVersionedString('sw.js',
-        /(const CACHE_NAME = 'jsonmate-v)(\d+\.\d+\.\d+)(')/, version, 'CACHE_NAME');
+        /(const CACHE_NAME = 'advanced-json-formatter-v)(\d+\.\d+\.\d+)(')/, version, 'CACHE_NAME');
 
-    // Cargo.lock: 只改 jsonmate 包自己的 version 行（其他依赖不动）
+    // Cargo.lock: 只改 advanced-json-formatter 包自己的 version 行（其他依赖不动）
     const lockPath = 'src-tauri/Cargo.lock';
     const lock = read(lockPath);
-    const pkgRe = /(\[\[package\]\]\r?\nname = "jsonmate"\r?\nversion = ")(\d+\.\d+\.\d+)(")/;
-    if (!pkgRe.test(lock)) throw new Error('Cargo.lock: jsonmate package entry not found');
+    const pkgRe = /(\[\[package\]\]\r?\nname = "advanced-json-formatter"\r?\nversion = ")(\d+\.\d+\.\d+)(")/;
+    if (!pkgRe.test(lock)) throw new Error('Cargo.lock: advanced-json-formatter package entry not found');
     write(lockPath, lock.replace(pkgRe, (m, p1, p2, p3) => p1 + version + p3), version);
 
     console.log(`\nAll version files synced to ${version}.`);

@@ -1,5 +1,5 @@
 {
-  "name": "jsonmate",
+  "name": "advanced-json-formatter",
   "version": "1.5.79",
   "description": "JsonMate - Tauri 桌面应用",
   "private": true,

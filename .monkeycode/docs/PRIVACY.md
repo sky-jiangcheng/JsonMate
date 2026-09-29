@@ -21,7 +21,7 @@ The app does not collect data from children and is suitable for users of all age
 ## Contact
 
 For privacy-related questions, please open an issue on our GitHub repository:  
-https://github.com/sky-jiangcheng/jsonnest/issues
+https://github.com/sky-jiangcheng/advanced-json-formatter/issues
 
 ## Changes
 

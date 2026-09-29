@@ -143,7 +143,7 @@ mod tests {
 
     #[test]
     fn atomic_write_creates_then_replaces() {
-        let dir = std::env::temp_dir().join(format!("jsonmate-atomic-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("advanced-json-formatter-atomic-{}", std::process::id()));
         fs::create_dir_all(&dir).unwrap();
         let target = dir.join("out.json");
 

@@ -49,7 +49,7 @@ v1.5.7 起 iOS/macOS 上架连续踩坑，根因层层叠加，修了多轮才�
 
 ## 在 GitHub 建 Issue Milestone（gh 未装，网页操作）
 
-打开 `https://github.com/sky-jiangcheng/jsonnest/milestones/new`，填：
+打开 `https://github.com/sky-jiangcheng/advanced-json-formatter/milestones/new`，填：
 
 - **Title**：`App Store 图标 + 提交流程修复`
 - **Description**（可粘）：

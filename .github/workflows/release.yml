@@ -616,7 +616,7 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          PBXPROJ="src-tauri/gen/apple/jsonmate.xcodeproj/project.pbxproj"
+          PBXPROJ="src-tauri/gen/apple/advanced-json-formatter.xcodeproj/project.pbxproj"
           # 输出当前签名配置用于调试
           echo "=== Before ==="
           grep -E "(DEVELOPMENT_TEAM|CODE_SIGN_STYLE|PROVISIONING_PROFILE|CODE_SIGN_IDENTITY|PRODUCT_BUNDLE_IDENTIFIER)" "$PBXPROJ" | head -20
@@ -629,7 +629,7 @@ jobs:
           team_id = os.environ.get("APPLE_TEAM_ID", "")
           profile_name = os.environ.get("PROFILE_NAME", "")
           profile_uuid = os.environ.get("PROFILE_UUID", "")
-          pbxproj_path = "src-tauri/gen/apple/jsonmate.xcodeproj/project.pbxproj"
+          pbxproj_path = "src-tauri/gen/apple/advanced-json-formatter.xcodeproj/project.pbxproj"
 
           with open(pbxproj_path, "r") as f:
               content = f.read()

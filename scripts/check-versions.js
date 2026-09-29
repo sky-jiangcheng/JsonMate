@@ -27,7 +27,7 @@ const FILES = {
   'package.json': /"version":\s*"([^"]+)"/,
   'src-tauri/tauri.conf.json': /"version":\s*"([^"]+)"/,
   'src-tauri/Cargo.toml': /^\s*version\s*=\s*"([^"]+)"/m,
-  'sw.js': /CACHE_NAME\s*=\s*'jsonmate-v([\d\.]+)'/,
+  'sw.js': /CACHE_NAME\s*=\s*'advanced-json-formatter-v([\d\.]+)'/,
 };
 
 function readVersion(file, re) {

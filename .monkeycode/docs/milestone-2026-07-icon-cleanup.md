@@ -47,7 +47,7 @@ v1.5.12 之前项目存在以下问题：
 
 ## 在 GitHub 建 Issue Milestone（可选）
 
-打开 `https://github.com/sky-jiangcheng/jsonnest/milestones/new`，填：
+打开 `https://github.com/sky-jiangcheng/advanced-json-formatter/milestones/new`，填：
 
 - **Title**：`图标清理 + 目录整理`
 - **Description**（可粘）：

@@ -2,7 +2,7 @@
 
 一个现代化的 JSON 格式化、压缩、验证与对比工具。纯前端单文件实现，支持 Web / 桌面端 / iOS。
 
-> **在线使用** → [sky-jiangcheng.github.io/JsonMate](https://sky-jiangcheng.github.io/JsonMate/)
+> **在线使用** → [sky-jiangcheng.github.io/advanced-json-formatter](https://sky-jiangcheng.github.io/advanced-json-formatter/)
 
 ---
 
@@ -95,7 +95,7 @@
 | Linux | Tauri v2 | `.deb` / `.rpm` / `.AppImage` |
 | iOS | Tauri v2 (iOS) | App Store |
 
-[![Deploy Status](https://github.com/sky-jiangcheng/jsonnest/actions/workflows/pages.yml/badge.svg)](https://github.com/sky-jiangcheng/jsonnest/actions/workflows/pages.yml)
+[![Deploy Status](https://github.com/sky-jiangcheng/advanced-json-formatter/actions/workflows/pages.yml/badge.svg)](https://github.com/sky-jiangcheng/advanced-json-formatter/actions/workflows/pages.yml)
 
 ### 本地构建
 
