@@ -19,7 +19,8 @@
       "entitlements": "./Entitlements.plist",
       "files": {
         "embedded.provisionprofile": "./embedded.provisionprofile"
-      }
+      },
+      "bundleName": "JSON Formatter"
     }
   },
   "version": "1.5.80"
