@@ -19,13 +19,6 @@
 
   var RE_MOBILE_UA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|webOS|BlackBerry|IEMobile|Opera Mini/i;
 
-  function isTauriShell() {
-    if (typeof window === 'undefined') return false;
-    // Tauri v2 无论 withGlobalTauri 是否开启都会注入 __TAURI_INTERNALS__（IPC 桥）；
-    // withGlobalTauri: true 时还会有 __TAURI__。任一存在即判定为壳内。
-    return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
-  }
-
   // 稳定设备类别: 会话期内不变, 不读视口宽度。
   function deviceClass() {
     try {
@@ -43,6 +36,13 @@
     } catch (e) {
       return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop';
     }
+  }
+
+  // Tauri v2 无论 withGlobalTauri 是否开启都会注入 __TAURI_INTERNALS__（IPC 桥）；
+  // withGlobalTauri: true 时还会有 __TAURI__。任一存在即判定为壳内。
+  function isTauriShell() {
+    if (typeof window === 'undefined') return false;
+    return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
   }
 
   // UI 层 = 设备类别 + 视口（仅桌面浏览器引入宽度维度）。
@@ -75,7 +75,6 @@
     window.addEventListener('orientationchange', function () {
       setTimeout(syncDeviceToDOM, 100);
     });
-    // Tauri 桌面壳全局对象注入时机可能略晚于 DOMContentLoaded，延迟再校正一次。
     window.addEventListener('load', syncDeviceToDOM);
     setTimeout(syncDeviceToDOM, 50);
   }

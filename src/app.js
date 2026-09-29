@@ -26,16 +26,12 @@
       // Android detection
       var isAndroid = /Android/.test(navigator.userAgent);
       
-      // Tauri mobile detection
-      var isTauriMobile = typeof window !== 'undefined' && 
-                           window.__TAURI__ && 
-                           window.__TAURI__.platform === 'mobile';
-      
-      this._cached = !!(isIOS || isAndroid || isTauriMobile);
+      this._cached = !!(isIOS || isAndroid);
       return this._cached;
     },
     isTauri: function() {
-      return typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
+      if (typeof window === 'undefined') return false;
+      return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
     },
     getPlatform: function() {
       if (this.isMobile()) {

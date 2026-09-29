@@ -1,10 +1,12 @@
 name: Version Check
 
 # 版本一致性"check 流程"
-#   1) PR -> main: 自动检测 package.json / tauri.conf.json / Cargo.toml 三处版本
-#      是否一致; 不一致则自动 fix(以 package.json 为准同步) 并推回 PR 分支。
+#   1) PR -> main: 检测 PR 提交里的版本号是否一致。
+#      为避免 pwn-request(M-1), 这里 **不执行 PR 提交中的任何仓库脚本**:
+#      checkout 关闭凭据持久化, 版本比较用内联 jq/sed 完成, 只读数据不执行代码。
 #   2) 推送 v* tag: 校验三处一致, 且 tag 版本号必须等于文件当前版本,
 #      否则直接失败 (不允许静默上传错误/重复版本到 App Store)。
+#      tag 来自受信任分支, 因此允许调用仓库自带脚本 check-versions.js。
 on:
   pull_request:
     branches: [main]
@@ -14,41 +16,54 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # PR 模式下需要, 用于自动 fix 后推回分支
+  contents: read
 
 jobs:
   consistency:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          # PR 模式下检出源分支, 以便把自动修复推回该分支
-          ref: ${{ github.head_ref || github.ref_name }}
+          # PR 模式检出 PR 自己的提交(否则检查的是 base, 等于没检查);
+          # persist-credentials: false 保证 .git/config 里没有 token, 即使被诱导也无法 push。
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
-      - name: Check version consistency
-        id: check
-        run: node scripts/check-versions.js check
-
-      # ---- PR 模式: 不一致 -> 自动修复并推回 ----
-      - name: Auto-fix & push (PR only)
-        if: ${{ failure() && github.event_name == 'pull_request' }}
+      # ---- PR 模式: 内联比较, 不执行仓库代码 ----
+      - name: Check version consistency (PR files, no repo code executed)
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
-          node scripts/check-versions.js fix
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          # bump-version.js 实际更新 4 处(三配置文件 + sw.js), 必须全部提交,
-          # 否则 PR 自动修复不完整, 构建仍带着不一致版本
-          git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml sw.js
-          git commit -m "ci: auto-sync versions to $(node -p "require('./package.json').version")" \
-            || echo "nothing to commit"
-          git push
+          set -eu
+          pkg=$(jq -r '.version' package.json)
+          conf=$(jq -r '.version' src-tauri/tauri.conf.json)
+          cargo_ver=$(awk -F'"' '/^[[:space:]]*version[[:space:]]*=/{print $2; exit}' src-tauri/Cargo.toml)
+          sw_ver=$(sed -n "s/.*jsonmate-v\([0-9.]*\)'.*/\1/p" sw.js)
+
+          echo "package.json=$pkg tauri.conf.json=$conf Cargo.toml=$cargo_ver sw.js=$sw_ver"
+
+          if [ -z "$pkg" ] || [ -z "$conf" ] || [ -z "$cargo_ver" ] || [ -z "$sw_ver" ]; then
+            echo "::error::无法从上述文件中解析版本号, 检查解析逻辑"
+            exit 1
+          fi
+
+          if [ "$pkg" != "$conf" ] || [ "$pkg" != "$cargo_ver" ] || [ "$pkg" != "$sw_ver" ]; then
+            echo "::error::版本不一致! 请以 package.json=$pkg 为准统一 (node scripts/check-versions.js fix)"
+            exit 1
+          fi
+
+          echo "✅ 版本一致: $pkg"
 
       # ---- Tag 模式: tag 版本号必须等于文件当前版本 ----
       # (不一致直接失败, 不自动改写发版文件; 提示先 bump 再打 tag)
+      # tag 指向受信任分支, 这里才允许调用仓库自带脚本。
+      - name: Check version consistency (trusted tag code)
+        if: ${{ github.event_name != 'pull_request' }}
+        run: node scripts/check-versions.js check
+
       - name: Tag version must match files (tag only)
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
         run: node scripts/check-versions.js tag "${GITHUB_REF_NAME#v}"

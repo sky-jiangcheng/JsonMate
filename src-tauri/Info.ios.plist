@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- WKWebView 的 <input type="file"> 在 iOS 上会弹出 "Take Photo or Video"，
+	     点击后 WebKit 直接拉起 UIImagePickerController。缺少 NSCameraUsageDescription
+	     时 TCC 会立即杀进程（表现为选完 Take Photo 就闪退），所以此 key 是硬性要求。
+	     本文件由 Tauri 在 ios init/build 时自动与模板 Info.plist 合并
+	     （查找规则：与 tauri.conf.json 同目录的 Info.plist / Info.ios.plist，后者仅 iOS）。
+	     注意：bundle.iOS.infoPlist 字段类型是「文件路径字符串」，不能写成键值字典。 -->
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is required to take a photo for the background image.</string>
+</dict>
+</plist>

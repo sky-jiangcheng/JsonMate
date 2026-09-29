@@ -21,6 +21,11 @@ import base64
 import urllib.request
 import urllib.error
 
+# 固定版本：发布链路上不引入未受控依赖。CI 已在
+# release.yml 的 "Install cryptography" 步骤显式安装同一版本，
+# 这里的兜底仅供本地运行使用。升级时两处一起改。
+CRYPTOGRAPHY_VERSION = "50.0.1"
+
 
 def ensure_crypto():
     """确保 cryptography 库可用"""
@@ -30,10 +35,11 @@ def ensure_crypto():
         from cryptography.hazmat.primitives import hashes
         return serialization, ec, hashes
     except ImportError:
-        print("Installing cryptography library...")
+        print(f"Installing cryptography=={CRYPTOGRAPHY_VERSION}...")
         import subprocess
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "cryptography", "-q"],
+            [sys.executable, "-m", "pip", "install",
+             f"cryptography=={CRYPTOGRAPHY_VERSION}", "-q"],
             stdout=subprocess.DEVNULL,
         )
         from cryptography.hazmat.primitives import serialization

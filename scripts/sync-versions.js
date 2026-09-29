@@ -8,6 +8,8 @@
      - src-tauri/Cargo.toml
      - src-tauri/Cargo.lock   (仅 jsonmate 包条目)
      - src-tauri/tauri.conf.json
+     - src-tauri/tauri.desktop.conf.json
+     - src-tauri/tauri.mobile.conf.json
      - src-tauri/tauri.appstore.conf.json
      - src-tauri/tauri.ios.conf.json
      - sw.js (CACHE_NAME)
@@ -50,6 +52,10 @@ function main() {
     patchVersionedString('src-tauri/Cargo.toml',
         /^(version\s*=\s*")(\d+\.\d+\.\d+)(")/m, version, 'version field');
     patchVersionedString('src-tauri/tauri.conf.json',
+        /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
+    patchVersionedString('src-tauri/tauri.desktop.conf.json',
+        /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
+    patchVersionedString('src-tauri/tauri.mobile.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
     patchVersionedString('src-tauri/tauri.appstore.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');

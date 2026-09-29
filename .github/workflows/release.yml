@@ -21,9 +21,9 @@ jobs:
   version-gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -38,14 +38,14 @@ jobs:
     needs: [version-gate]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -57,7 +57,7 @@ jobs:
       - name: Check for CDN references
         run: npm run check:cdn
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -72,12 +72,12 @@ jobs:
     needs: [version-gate]
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Install Rust targets
         run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -92,7 +92,7 @@ jobs:
       - name: Generate macOS icons
         run: npx tauri icon src-tauri/app-icon-source.png
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -106,9 +106,9 @@ jobs:
     needs: [version-gate]
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -120,7 +120,7 @@ jobs:
       - name: Check for CDN references
         run: npm run check:cdn
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -136,17 +136,20 @@ jobs:
     runs-on: macos-latest
     environment:
       name: appstore
+    # job 级只保留"是否已配置"的布尔标记：secrets 上下文在 step 级 if 中不可用，
+    # 而证书/密钥本体一律下沉到真正使用它们的 step，避免 npm ci / build.js
+    # 这类依赖执行面读到签名私钥。
     env:
-      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-      PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
-      APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-      APPLE_INSTALLER_CERTIFICATE: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
+      HAS_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAS_PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE != '' }}
+      HAS_APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+      HAS_APPLE_INSTALLER_CERTIFICATE: ${{ secrets.APPLE_INSTALLER_CERTIFICATE != '' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       # ---- App Store 版本重复快速拦截 (在耗时构建之前失败) ----
       - name: Write App Store Connect API key
-        if: env.APP_STORE_CONNECT_API_KEY != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -158,7 +161,7 @@ jobs:
           echo "APP_STORE_CONNECT_KEY_PATH=$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8" >> $GITHUB_ENV
 
       - name: Fail fast if macOS App Store version already exists
-        if: env.APP_STORE_CONNECT_API_KEY != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -170,7 +173,7 @@ jobs:
       - name: Install Rust targets
         run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -186,7 +189,7 @@ jobs:
         run: npx tauri icon src-tauri/app-icon-source.png
 
       - name: Import Apple certificate
-        if: env.APPLE_CERTIFICATE != ''
+        if: env.HAS_APPLE_CERTIFICATE == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -221,7 +224,7 @@ jobs:
           fi
 
       - name: Install provisioning profile
-        if: env.PROVISIONING_PROFILE != ''
+        if: env.HAS_PROVISIONING_PROFILE == 'true'
         env:
           PROVISIONING_PROFILE: ${{ secrets.PROVISIONING_PROFILE }}
         run: |
@@ -229,7 +232,7 @@ jobs:
           echo "$PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/appstore.provisionprofile
           echo "$PROVISIONING_PROFILE" | base64 --decode > src-tauri/embedded.provisionprofile
 
-      - uses: tauri-apps/tauri-action@v1
+      - uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -241,7 +244,7 @@ jobs:
           args: --target universal-apple-darwin --config src-tauri/tauri.appstore.conf.json
 
       - name: Import Apple Installer certificate
-        if: env.APPLE_INSTALLER_CERTIFICATE != ''
+        if: env.HAS_APPLE_INSTALLER_CERTIFICATE == 'true'
         env:
           APPLE_INSTALLER_CERTIFICATE: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
           APPLE_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
@@ -278,7 +281,7 @@ jobs:
           echo "APPLE_INSTALLER_IDENTITY=$INSTALLER_ID" >> $GITHUB_ENV
 
       - name: Build and sign PKG
-        if: env.APPLE_INSTALLER_CERTIFICATE != ''
+        if: env.HAS_APPLE_INSTALLER_CERTIFICATE == 'true'
         env:
           APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
         run: |
@@ -334,7 +337,7 @@ jobs:
           echo "PKG_PATH=$PKG" >> $GITHUB_ENV
 
       - name: Upload PKG to App Store Connect
-        if: env.APP_STORE_CONNECT_API_KEY != '' && env.APPLE_INSTALLER_CERTIFICATE != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APPLE_INSTALLER_CERTIFICATE == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -363,8 +366,18 @@ jobs:
 
           echo "✓ PKG uploaded to App Store Connect"
 
+      - name: Install cryptography (pinned)
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APPLE_INSTALLER_CERTIFICATE == 'true'
+        run: |
+          # venv 而非系统 pip: 新版 runner 的 Python 可能带 EXTERNALLY-MANAGED 标记(PEP 668),
+          # 直接 pip install 会失败。venv 同时避免污染 runner 自带环境。
+          python3 -m venv "$RUNNER_TEMP/appstore-venv"
+          echo "$RUNNER_TEMP/appstore-venv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/appstore-venv/bin/python" -m pip install --upgrade pip -q
+          "$RUNNER_TEMP/appstore-venv/bin/python" -m pip install "cryptography==50.0.1" -q
+
       - name: Submit for review
-        if: env.APP_STORE_CONNECT_API_KEY != '' && env.APPLE_INSTALLER_CERTIFICATE != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APPLE_INSTALLER_CERTIFICATE == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -393,12 +406,15 @@ jobs:
     environment:
       name: appstore
     env:
-      IOS_APPLE_CERTIFICATE: ${{ secrets.IOS_APPLE_CERTIFICATE }}
-      IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
-      APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
-      APP_STORE_CONNECT_APP_ID_IOS: ${{ secrets.APP_STORE_CONNECT_APP_ID_IOS }}
+      HAS_IOS_APPLE_CERTIFICATE: ${{ secrets.IOS_APPLE_CERTIFICATE != '' }}
+      # iOS 证书步骤允许回退到通用证书, 所以这里也要有对应标记, 否则 `if` 里的
+      # `|| env.HAS_APPLE_CERTIFICATE == 'true'` 恒为空, 回退分支永远不成立。
+      HAS_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE != '' }}
+      HAS_IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE != '' }}
+      HAS_APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY != '' }}
+      HAS_APP_STORE_CONNECT_APP_ID_IOS: ${{ secrets.APP_STORE_CONNECT_APP_ID_IOS != '' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Fix Homebrew tap trust warnings (macOS runner image compat)
         run: |
@@ -407,7 +423,7 @@ jobs:
 
       # ---- App Store 版本重复快速拦截 (在耗时构建之前失败) ----
       - name: Write App Store Connect API key
-        if: env.APP_STORE_CONNECT_API_KEY != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -419,7 +435,7 @@ jobs:
           echo "APP_STORE_CONNECT_KEY_PATH=$HOME/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8" >> $GITHUB_ENV
 
       - name: Fail fast if iOS App Store version already exists
-        if: env.APP_STORE_CONNECT_API_KEY != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -431,7 +447,7 @@ jobs:
       - name: Install Rust targets
         run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '20'
 
@@ -444,9 +460,12 @@ jobs:
         run: npm run check:cdn
 
       - name: Import Apple certificate (iOS)
-        if: env.IOS_APPLE_CERTIFICATE != '' || env.APPLE_CERTIFICATE != ''
+        if: env.HAS_IOS_APPLE_CERTIFICATE == 'true' || env.HAS_APPLE_CERTIFICATE == 'true'
         env:
           IOS_APPLE_CERTIFICATE: ${{ secrets.IOS_APPLE_CERTIFICATE }}
+          # 回退目标: 只配了通用 APPLE_CERTIFICATE 的 iOS job 也必须能签名,
+          # 否则该步骤会被静默跳过, 构建走到 codesign 才以无签名错误收场。
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
         run: |
@@ -494,7 +513,7 @@ jobs:
           fi
 
       - name: Install iOS provisioning profile
-        if: env.IOS_PROVISIONING_PROFILE != ''
+        if: env.HAS_IOS_PROVISIONING_PROFILE == 'true'
         env:
           IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
         run: |
@@ -777,7 +796,7 @@ jobs:
           find src-tauri/gen/apple/build -name "*.ipa" -type f 2>/dev/null
 
       - name: Upload IPA to App Store Connect
-        if: env.APP_STORE_CONNECT_API_KEY != '' && env.APP_STORE_CONNECT_APP_ID_IOS != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APP_STORE_CONNECT_APP_ID_IOS == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -803,8 +822,18 @@ jobs:
 
           echo "✓ IPA uploaded to App Store Connect"
 
+      - name: Install cryptography (pinned)
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APP_STORE_CONNECT_APP_ID_IOS == 'true'
+        run: |
+          # venv 而非系统 pip: 新版 runner 的 Python 可能带 EXTERNALLY-MANAGED 标记(PEP 668),
+          # 直接 pip install 会失败。venv 同时避免污染 runner 自带环境。
+          python3 -m venv "$RUNNER_TEMP/appstore-venv"
+          echo "$RUNNER_TEMP/appstore-venv/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/appstore-venv/bin/python" -m pip install --upgrade pip -q
+          "$RUNNER_TEMP/appstore-venv/bin/python" -m pip install "cryptography==50.0.1" -q
+
       - name: Submit for review
-        if: env.APP_STORE_CONNECT_API_KEY != '' && env.APP_STORE_CONNECT_APP_ID_IOS != ''
+        if: env.HAS_APP_STORE_CONNECT_API_KEY == 'true' && env.HAS_APP_STORE_CONNECT_APP_ID_IOS == 'true'
         env:
           APP_STORE_CONNECT_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}

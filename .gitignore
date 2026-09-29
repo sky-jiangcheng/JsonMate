@@ -15,8 +15,18 @@ routing-app-coverage.geojson
 
 # ---- 本地 / 工具目录 ----
 .workbuddy/
+.claude/
+.omo/
+.dumate/
+.easyclaw/
+generated-icons-tmp/
+github-pages/
+appstore-pkg/
+macos-dmg-v*/
+windows-nsis-v*/
+tauri-ios-ipa-v*/
+screenshots/*.json
 
 # ---- 截图源（保留）vs 生成包（忽略）----
 # screenshots/ 为原始截屏源，纳入版本控制
 # 其下各 *-screenshots/ 包由 scripts/ 生成，已忽略
-

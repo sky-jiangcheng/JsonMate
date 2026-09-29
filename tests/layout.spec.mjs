@@ -59,7 +59,9 @@ async function newPage(browser, { viewport, tauri = false, deviceDescriptor = nu
     ...(deviceDescriptor || {}),
   });
   if (tauri) {
-    await context.addInitScript(() => { window.__TAURI__ = { core: {} }; });
+    await context.addInitScript(() => {
+      window.__TAURI_INTERNALS__ = { invoke: function () {}, transformCallback: function () {} };
+    });
   }
   const page = await context.newPage();
   await page.goto(BASE + '/');
@@ -136,7 +138,7 @@ async function main() {
   await scenario('Tauri v2 IPC bridge 单独存在（__TAURI_INTERNALS__）也锁定 desktop，修复 App Store 状态栏消失', async () => {
     const context = await browser.newContext({ viewport: { width: 860, height: 800 } });
     await context.addInitScript(() => {
-      // 模拟 App Store 构建中 __TAURI__ 全局不可用、只有内部 IPC 桥的场景
+      // 模拟关闭 withGlobalTauri 后只有内部 IPC 桥的场景
       window.__TAURI_INTERNALS__ = { invoke: function () {}, transformCallback: function () {} };
     });
     const page = await context.newPage();
@@ -213,7 +215,7 @@ async function main() {
     const { context, page } = await newPage(browser, { viewport: { width: 1280, height: 800 }, locale: 'ja-JP' });
     check('lang-btn data-lang=ja', await page.getAttribute('#lang-btn', 'data-lang') === 'ja');
     check('格式化按钮显示「整形」', (await page.locator('[data-i18n="format"]').first().textContent()) === '整形');
-    check('标题为 JSON Formatter', (await page.title()) === 'JSON Formatter');
+    check('标题为品牌名 JsonMate (title 不随语言变化)', (await page.title()) === 'JsonMate');
     await context.close();
   });
 

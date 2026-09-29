@@ -1,6 +1,6 @@
 [package]
 name = "jsonmate"
-version = "1.5.76"
+version = "1.5.78"
 description = "JsonMate - 支持格式化、压缩、树形视图、对比和历史记录"
 authors = ["sky-jiangcheng"]
 license = "MIT"
@@ -15,8 +15,11 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+# 仅在 Rust 侧调用的插件。capabilities/default.json 不授予任何 dialog:* /
+# clipboard-manager:* 权限, 因此 WebView 内的脚本无法触达它们的 JS API,
+# CVE-2026-95627 (dialog 选择器递归扩权) 因此没有攻击者可达的触发路径。
+# 刻意不引入 tauri-plugin-fs: 它是 fs 写作用域的来源, 本项目用 std::fs 即可。
 tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
 tauri-plugin-clipboard-manager = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

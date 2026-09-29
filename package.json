@@ -1,6 +1,6 @@
 {
   "name": "jsonmate",
-  "version": "1.5.76",
+  "version": "1.5.78",
   "description": "JsonMate - Tauri 桌面应用",
   "private": true,
   "scripts": {
@@ -22,6 +22,6 @@
     "@tauri-apps/cli": "^2",
     "husky": "^9.1.7",
     "playwright-core": "^1.62.1",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
   }
 }

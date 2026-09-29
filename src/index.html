@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <!-- 早期同步设置 data-device,避免桌面端闪出移动布局。注意: Tauri CSP 不允许内联脚本,
        故放在外部 head.js 中同步执行(效果同内联)。router.js 会在 DOMContentLoaded 时重新精确检测。 -->
   <script src="head.js"></script>

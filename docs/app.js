@@ -19,13 +19,6 @@
 
   var RE_MOBILE_UA = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|webOS|BlackBerry|IEMobile|Opera Mini/i;
 
-  function isTauriShell() {
-    if (typeof window === 'undefined') return false;
-    // Tauri v2 无论 withGlobalTauri 是否开启都会注入 __TAURI_INTERNALS__（IPC 桥）；
-    // withGlobalTauri: true 时还会有 __TAURI__。任一存在即判定为壳内。
-    return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
-  }
-
   // 稳定设备类别: 会话期内不变, 不读视口宽度。
   function deviceClass() {
     try {
@@ -43,6 +36,13 @@
     } catch (e) {
       return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ? 'mobile' : 'desktop';
     }
+  }
+
+  // Tauri v2 无论 withGlobalTauri 是否开启都会注入 __TAURI_INTERNALS__（IPC 桥）；
+  // withGlobalTauri: true 时还会有 __TAURI__。任一存在即判定为壳内。
+  function isTauriShell() {
+    if (typeof window === 'undefined') return false;
+    return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
   }
 
   // UI 层 = 设备类别 + 视口（仅桌面浏览器引入宽度维度）。
@@ -75,7 +75,6 @@
     window.addEventListener('orientationchange', function () {
       setTimeout(syncDeviceToDOM, 100);
     });
-    // Tauri 桌面壳全局对象注入时机可能略晚于 DOMContentLoaded，延迟再校正一次。
     window.addEventListener('load', syncDeviceToDOM);
     setTimeout(syncDeviceToDOM, 50);
   }
@@ -2209,6 +2208,20 @@
     updateOutputStatus(result.content);
   }
 
+  // Tauri 壳内注入 __TAURI_INTERNALS__ (IPC 桥), withGlobalTauri 关闭时依然存在。
+  // 走自建 command 而非插件 JS API: capabilities/default.json 只授予 core:default,
+  // dialog/clipboard 的 JS API 对 WebView 不可达, 弹窗与写盘只发生在 Rust 侧。
+  function tauriInvoke(cmd, args) {
+    if (typeof window === 'undefined') return null;
+    var internals = window.__TAURI_INTERNALS__;
+    if (!internals || typeof internals.invoke !== 'function') return null;
+    try {
+      return internals.invoke(cmd, args);
+    } catch (e) {
+      return null;
+    }
+  }
+
   function handleCopy() {
     var detail = _store.getStateForKey('lastDetailContent') || '';
     var formatted = _store.getStateForKey('output') || '';
@@ -2220,56 +2233,26 @@
     var fallbackCopy = function () {
       var ta = document.createElement('textarea');
       ta.value = content;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
       document.body.appendChild(ta);
       ta.select();
       var ok = document.execCommand('copy');
       document.body.removeChild(ta);
       showToast(ok ? _i18n.t('copied') : _i18n.t('copyFailed'), 2000, ok ? 'icon-check' : 'icon-alert-triangle');
     };
-    var isTauri = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
-    if (isTauri) {
-      // Tauri v2 plugin-clipboard-manager exposes `clipboard`; the v1 name was
-      // `clipboardManager`. Resolve the object and its writeText in both shapes.
-      var clipboardObj = window.__TAURI__.clipboardManager || window.__TAURI__.clipboard;
-      var clipboard2 = window.__TAURI__.clipboard;
-      var writeText = null;
-      if (clipboardObj && typeof clipboardObj.writeText === 'function') writeText = clipboardObj.writeText.bind(clipboardObj);
-      else if (clipboard2 && typeof clipboard2.writeText === 'function') writeText = clipboard2.writeText.bind(clipboard2);
-      if (writeText) {
-        writeText(content).then(function () {
-          showToast(_i18n.t('copied'), 2000, 'icon-check');
-        }).catch(function () {
-          showToast(_i18n.t('copyFailed'), 2000, 'icon-alert-triangle');
-        });
-      } else {
-        fallbackCopy();
-      }
+    var nativeCopy = tauriInvoke('copy_text', { text: content });
+    if (nativeCopy) {
+      nativeCopy.then(function () {
+        showToast(_i18n.t('copied'), 2000, 'icon-check');
+      }).catch(function () { fallbackCopy(); });
       return;
     }
     if (!navigator.clipboard) { fallbackCopy(); return; }
     navigator.clipboard.writeText(content).then(function () {
       showToast(_i18n.t('copied'), 2000, 'icon-check');
     }).catch(function () { fallbackCopy(); });
-  }
-
-  /**
-   * Tauri 写文件, 先尝试把目标路径加入临时 fs scope(allow-apply-scope),
-   * 使 dialog.save 用户所选任意路径都能写入; apply_scope 不可用时回退到受限 scope 写入。
-   * 返回 Promise 且成功时 resolve(true)。
-   */
-  function writeWithAppliedScope(path, content) {
-    function doWrite() {
-      return window.__TAURI__.fs.writeTextFile(path, content).then(function () { return true; });
-    }
-    var tauri = window.__TAURI__;
-    var core = tauri && tauri.core;
-    // 尝试 apply_scope (tauri-plugin-fs v2): 把 path 加入允许范围。
-    // apply_scope 失败(命令不存在/未授权/路径不被允许)不阻断, 继续走受限 scope 直接写。
-    var pre = [];
-    if (core && typeof core.invoke === 'function') {
-      pre.push(core.invoke('plugin:fs|apply_scope', { paths: [path] }).catch(function () {}));
-    }
-    return Promise.all(pre).then(doWrite);
   }
 
   function handleDownload() {
@@ -2279,19 +2262,13 @@
       showToast(_i18n.t('nothingToDownload'), 2000, 'icon-alert-triangle');
       return;
     }
-    var isTauri = typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
-    if (isTauri) {
-      window.__TAURI__.dialog.save({
-        defaultPath: download.fileName,
-        filters: [{ name: 'JSON', extensions: ['json'] }]
-      }).then(function (path) {
-        if (!path) return;
-        // 把用户所选路径加入临时写范围(apply_scope), 允许保存到任意位置,
-        // 而不必全局放开 fs:scope "**"。若该命令不可用/未授权, 静默回退到
-        // 原有限 scope 的 writeTextFile, 不影响已授权路径的保存。
-        return writeWithAppliedScope(path, download.content);
-      }).then(function (done) {
-        if (done) showToast(_i18n.t('downloaded'), 2000, 'icon-download');
+    var nativeSave = tauriInvoke('save_json', {
+      defaultName: download.fileName,
+      content: download.content
+    });
+    if (nativeSave) {
+      nativeSave.then(function (savedPath) {
+        if (savedPath) showToast(_i18n.t('downloaded'), 2000, 'icon-download');
       }).catch(function () {
         showToast(_i18n.t('downloadFailed'), 2000, 'icon-alert-triangle');
       });
@@ -2631,16 +2608,12 @@
       // Android detection
       var isAndroid = /Android/.test(navigator.userAgent);
       
-      // Tauri mobile detection
-      var isTauriMobile = typeof window !== 'undefined' && 
-                           window.__TAURI__ && 
-                           window.__TAURI__.platform === 'mobile';
-      
-      this._cached = !!(isIOS || isAndroid || isTauriMobile);
+      this._cached = !!(isIOS || isAndroid);
       return this._cached;
     },
     isTauri: function() {
-      return typeof window !== 'undefined' && !!(window.__TAURI__ && window.__TAURI__.core);
+      if (typeof window === 'undefined') return false;
+      return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
     },
     getPlatform: function() {
       if (this.isMobile()) {
