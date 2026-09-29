@@ -817,9 +817,12 @@
 
     // Initialize store with persisted values
     if (window.__store) {
-      var persistedLang = localStorage.getItem('appLang') || 'en';
+      // 语言以顶部 i18n._lang 为准（它已按"显式保存 → 系统语言 → en"决定）。
+      // 这里绝不能在没有用户选择时回写 'en'：那会让首次访问的会话看着是系统
+      // 语言、刷新一次就永久变成英文 —— 顶部 detectInitialLang 的注释特意警告过。
+      if (localStorage.getItem('appLang')) window.__store.persistLang(i18n._lang);
+      else window.__store.setState({ lang: i18n._lang });
       var persistedTheme = localStorage.getItem('theme') || 'light';
-      window.__store.persistLang(persistedLang);
       window.__store.persistTheme(persistedTheme);
     }
 
