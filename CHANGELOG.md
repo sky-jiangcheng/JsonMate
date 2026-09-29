@@ -767,7 +767,33 @@
 ### Fixed
 - manifest start_url/scope 跟随仓库改名 JsonNest -> JsonMate
 
-## [1.5.80] - 2026-09-29
+## [1.5.81] - 2026-09-29
+
+### Fixed
+- 历史记录两处会静默丢用户数据的缺陷：往返读取时对首尾为双引号的内容无条件脱一层壳（顶层 JSON 字符串 `"hello"` 被改成非法的 `hello`）；localStorage 配额满时删除整个 `jsonHistory` 键（现改为保留原有数据并向用户明确报错）
+- 无 id 的老历史记录每次读取都生成随机 id，导致删除/勾选按 id 比对永不命中（现按内容确定性派生并自动去重）；其兜底启发式还会把 `name`/`label` 误当作 JSON 内容
+- 带 BOM 的输入被误报为「JSON 无效」（Windows 工具导出的 `.json` 常见）
+- 解析错误页残留：错误态此前绕过 store 直接写 DOM，「格式化 A 成功 → 改坏失败 → 改回 A 再成功」时页面停在错误视图；现纳入单向数据流，并在切换语言时同步重画错误提示
+- `diffJson` 用 `key in obj` 判键，`{"toString":...}` 这类合法 JSON 产生幻影 changed 且对应行渲染为空白
+- 首次访问把语言持久化成 `en`，刷新一次就覆盖系统语言
+- 拖拽 `.JSON` 大写后缀文件被拒（macOS 上常见且 MIME 常为空）
+- 清空编辑器后再保存会静默覆盖原先载入的那条历史记录
+- 移动端 `viewport` 的 `user-scalable=no` 导致无法双指缩放
+- 上架作业用 `github.ref_name` 当版本号：push `appstore` 分支时它是字面量 `"appstore"`，导致版本重复检查查错对象、提交审核空等数十分钟（现由 `version-gate` 从 `version.json` 解析后透传）
+- Pages 部署用 `cp -r dist/*` 漏掉点号文件，`build.js` 写入的 `.nojekyll` 从未进 `docs/`
+- 版本一致性门禁不含 `version.json`，而构建以它反向覆写其余文件（改齐其余处却漏改它时门禁放行、版本被静默回退）
+
+### Changed
+- 删除全仓无引用的 `tauri.desktop.conf.json` / `tauri.mobile.conf.json` 两套死配置，并移出版本同步清单（平台配置由 5 套收敛为 3 套）
+- 渲染大 JSON 时复用 store 中已解析的对象，不再每次重新 `JSON.parse`
+- 移除 `_platform` 的 localStorage 写入（全仓无读取方）
+- 文档套件补齐（ARCHITECTURE / SECURITY / CODE_OF_CONDUCT / Issue 模板）并修正改名后多处与实际仓库不符的描述
+
+### Tests
+- 新增 `tests/output-state.spec.mjs`（错误态端到端 + `diffJson` 源码级校验）
+- `scripts/test-tauri-detection.js` 移入 `tests/tauri-detection.spec.mjs`（转 ESM、自带静态服务，不再依赖外部 `:8765`）
+- CI `Layout Smoke Tests` 现依次执行三个 spec；此前测试命令是逐文件写死的，新增 spec 不接线就不会跑
+
 
 ### Changed
 - 仓库与 npm / Cargo 包名改名为 `advanced-json-formatter`

@@ -1,6 +1,6 @@
 {
   "name": "advanced-json-formatter",
-  "version": "1.5.80",
+  "version": "1.5.81",
   "description": "Advanced JSON Formatter - Tauri 桌面应用",
   "private": true,
   "scripts": {
