@@ -545,8 +545,24 @@ jobs:
           # 退出码（解析失败也会 exit 0，绝不能只 grep 某个固定路径）。
           PLIST_COUNT=0
           while IFS= read -r -d '' PLIST; do
-            PLIST_COUNT=$((PLIST_COUNT + 1))
-            if /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST" >/dev/null 2>&1; then
+          PLIST_COUNT=$((PLIST_COUNT + 1))
+          # tauri-bundler 把 productName 直写进 CFBundleDisplayName / CFBundleName
+          # (ios.rs 直接取 settings.product_name())，而 Tauri schema 的 bundle.iOS
+          # 没有任何名称字段（只有 MacConfig.bundleName），所以 iOS 侧只能在此改写。
+          # productName 是 23 字符的 "Advanced JSON Formatter"，超出 Apple 标注的
+          # iOS CFBundleName 15 字符上限，桌面图标标签会被系统截断成 "Advanced JSON..."。
+          # 图标标签与 CFBundleName 一并改用短名。
+          for KEY in CFBundleDisplayName CFBundleName; do
+            /usr/libexec/PlistBuddy -c "Delete :$KEY" "$PLIST" 2>/dev/null || true
+            /usr/libexec/PlistBuddy -c "Add :$KEY string JSON Formatter" "$PLIST"
+            # 复验：PlistBuddy 解析失败也会 exit 0，只能靠 Print 的退出码判定
+            if ! /usr/libexec/PlistBuddy -c "Print :$KEY" "$PLIST" >/dev/null 2>&1; then
+              echo "::error::$PLIST 写入 $KEY 失败"
+              exit 1
+            fi
+          done
+          echo "OK: $PLIST 显示名已设为 JSON Formatter"
+          if /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$PLIST" >/dev/null 2>&1; then
               echo "OK: $PLIST 已含 NSCameraUsageDescription"
               continue
             fi
@@ -777,6 +793,14 @@ jobs:
           fi
           if ! /usr/libexec/PlistBuddy -c "Print :NSCameraUsageDescription" "$APP_PLIST"; then
             echo "::error::归档产物缺少 NSCameraUsageDescription，Take Photo 必崩，中止上传"
+            exit 1
+          fi
+          # 同样在最终产物上校验显示名：init 阶段的改写若没被 Xcode 真正编进
+          # archive，仍会一路绿灯到 TestFlight，图标标签显示成被截断的完整名。
+          ARCHIVED_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$APP_PLIST" 2>/dev/null || true)
+          echo "归档产物 CFBundleDisplayName: $ARCHIVED_NAME"
+          if [ "$ARCHIVED_NAME" != "JSON Formatter" ]; then
+            echo "::error::归档产物 CFBundleDisplayName='$ARCHIVED_NAME'，期望 'JSON Formatter'，桌面图标标签会被截断"
             exit 1
           fi
 
