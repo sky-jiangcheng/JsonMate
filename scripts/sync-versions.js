@@ -3,17 +3,17 @@
    Sync version.json → all version-bearing files (single source).
 
    发版只改 version.json，然后跑 `node scripts/build.js`（内部会调用本脚本）。
-   覆盖文件与 v1.5.59 时代手动 bump 的清单一致：
+   覆盖清单（与 check-versions.js 的门禁清单取并集）：
      - package.json
      - src-tauri/Cargo.toml
      - src-tauri/Cargo.lock   (仅 advanced-json-formatter 包条目)
      - src-tauri/tauri.conf.json
-     - src-tauri/tauri.desktop.conf.json
-     - src-tauri/tauri.mobile.conf.json
      - src-tauri/tauri.appstore.conf.json
      - src-tauri/tauri.ios.conf.json
      - sw.js (CACHE_NAME)
    release.yml 的 version-gate 会校验 tag 与这些文件一致。
+   注：曾同步 tauri.desktop/mobile.conf.json 两份，它们无任何构建引用，
+   属死配置，已随文件一并删除。
 ============================================================== */
 
 const fs = require('fs');
@@ -52,10 +52,6 @@ function main() {
     patchVersionedString('src-tauri/Cargo.toml',
         /^(version\s*=\s*")(\d+\.\d+\.\d+)(")/m, version, 'version field');
     patchVersionedString('src-tauri/tauri.conf.json',
-        /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
-    patchVersionedString('src-tauri/tauri.desktop.conf.json',
-        /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
-    patchVersionedString('src-tauri/tauri.mobile.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
     patchVersionedString('src-tauri/tauri.appstore.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
