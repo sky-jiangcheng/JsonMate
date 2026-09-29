@@ -16,12 +16,22 @@
     });
   }
 
+  /** 值本身是否是可解析的 JSON 文本 */
+  function isJsonText(v) {
+    if (typeof v !== 'string' || !v) return false;
+    try { JSON.parse(v); return true; } catch (_) { return false; }
+  }
+
+  // 老版本记录可能长得跟现在不一样。字段名白名单之外的字符串值一律不认作内容,
+  // 否则 name/label 会被误当成 JSON({name:'foo'} 这种记录读出来内容就成了 "foo")。
+  var NON_CONTENT_KEYS = { id: 1, _id: 1, name: 1, title: 1, label: 1 };
+
   function normalizeHistoryItem(raw) {
     if (!raw || typeof raw !== 'object') return null;
+    // id 必须跨次读取稳定: 之前用 Date.now()+random 兜底, 每次 getHistory() 都换,
+    // 而删除/勾选走的是"重新 getHistory 再按 id 比对", 结果永远比不中 —— 老记录删不掉。
+    // 这里用 内容+下标 做确定性派生, 同一份存储多次读出同一个 id。
     var id = String(raw.id || raw._id || '');
-    if (!id) id = 'legacy-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-    var name = String(raw.name || raw.title || raw.label || '');
-    if (!name) name = 'untitled';
     var content = '';
     // 跨版本字段兼容：历史上可能用过 content / json / text / data / value 等字段存内容
     if (typeof raw.content === 'string') content = raw.content;
@@ -29,16 +39,23 @@
     else if (typeof raw.text === 'string') content = raw.text;
     else if (typeof raw.data === 'string') content = raw.data;
     else if (typeof raw.value === 'string') content = raw.value;
-    // 老版本 {id, entries:[...]} 这种容器对象也尝试兜底取出第一个字符串
+    // 老版本 {id, entries:[...]} 这种容器对象: 取第一个字符串元素
+    else if (Array.isArray(raw.entries) && typeof raw.entries[0] === 'string') content = raw.entries[0];
     else if (raw && typeof raw === 'object') {
       for (var k in raw) {
+        if (NON_CONTENT_KEYS[k]) continue;
         var v = raw[k];
-        if (typeof v === 'string' && v.length > 0 && /[{["\d\-tfnsu]/.test(v.charAt(0) === ' ' ? v.trimLeft().charAt(0) : v.charAt(0))) {
-          content = v;
-          break;
-        }
+        if (isJsonText(v)) { content = v; break; }
       }
     }
+    if (!id) {
+      // 只用 内容+名称 派生, 不掺下标: 掺了下标的话删掉别的记录后 id 会跟着变。
+      var sum = 0, seed = content + '|' + String(raw.name || '');
+      for (var s = 0; s < seed.length; s++) sum = (sum * 31 + seed.charCodeAt(s)) >>> 0;
+      id = 'legacy-' + sum.toString(36);
+    }
+    var name = String(raw.name || raw.title || raw.label || '');
+    if (!name) name = 'untitled';
     // 老版本可能把内容多 stringify 了一层(如 "{\"a\":1}")。仅当脱一层之后
     // 内层仍是合法 JSON 时才脱壳: 顶层 JSON 字符串本身就是合法 JSON,
     // 无条件脱壳会把 "hello" 变成非法的 hello, 该记录重载后再也格式化不了。
@@ -65,9 +82,20 @@
     }
     if (!Array.isArray(raw)) return [];
     var out = [];
+    var seen = {};
     for (var i = 0; i < raw.length; i++) {
       var n = normalizeHistoryItem(raw[i]);
-      if (n) out.push(n);
+      if (!n) continue;
+      // 派生 id 理论上会撞（两条内容与名称都相同的无 id 老记录）。
+      // 撞了就加序号后缀, 否则按 id 删除会把两条一起删掉。
+      if (seen[n.id] !== undefined) {
+        seen[n.id]++;
+        n.id = n.id + '-' + seen[n.id];
+        while (seen[n.id] !== undefined) { seen[n.id]++; n.id = n.id.replace(/-\d+$/, '') + '-' + seen[n.id]; }
+      } else {
+        seen[n.id] = 0;
+      }
+      out.push(n);
     }
     return out;
   }
@@ -195,12 +223,16 @@
     var fixed = false;
     var fixMsg = '';
     var error = null;
+    // BOM: Windows 工具导出的 .json 常带 \uFEFF, JSON.parse 直接抛
+    // "Unexpected token '﻿'" —— 那不是用户的 JSON 写错了, 不该报"JSON 无效",
+    // 后续 tryFixJson 也因为 stack 为空(括号本来就平衡)帮不上忙。
+    var text = value && value.charCodeAt(0) === 0xFEFF ? value.slice(1) : value;
 
     try {
-      jsonObj = JSON.parse(value);
+      jsonObj = JSON.parse(text);
     } catch (err) {
       error = err;
-      var v = value;
+      var v = text;
       var uq = tryFixUnquotedKeys(v);
       if (uq !== v) {
         try {
@@ -227,15 +259,15 @@
             fixed = true;
             fixMsg = fixMsg || 'autoBracket';
           } catch (e2) {
-            return { error: err, input: value };
+            return { error: err, input: text };
           }
         } else {
-          return { error: err, input: value };
+          return { error: err, input: text };
         }
       }
     }
 
-    return { json: jsonObj, fixed: fixed, fixMsg: fixMsg, input: value };
+    return { json: jsonObj, fixed: fixed, fixMsg: fixMsg, input: text };
   }
 
   /* ==============================================================
@@ -299,6 +331,9 @@
       outputFixed: false,
       outputParsed: null,
       lastDetailContent: '',
+      // 清空后编辑器内容已经不再是"从某条历史记录载入的那条",
+      // 不重置的话接着输入新 JSON 再 Ctrl+S 会命中覆盖分支, 悄悄改掉旧记录
+      loadedHistoryId: null,
     };
   }
 
