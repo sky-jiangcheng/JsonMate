@@ -474,7 +474,6 @@
            （toolbar 高度约 52px + safe-area，取 60px 留呼吸空间） */
         [data-device="mobile"] #input,
         [data-device="mobile"] .output-content,
-        [data-device="mobile"] .output-placeholder,
         [data-device="mobile"] .error-display {
             padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
         }

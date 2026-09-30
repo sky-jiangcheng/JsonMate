@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hush-json-v1.5.83';
+const CACHE_NAME = 'hush-json-v1.5.84';
 const urlsToCache = [
   './',
   './index.html',

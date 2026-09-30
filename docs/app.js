@@ -679,11 +679,7 @@
   function renderEmptyContent() {
     var area = document.getElementById('output-content-area');
     if (!area) return;
-    area.innerHTML =
-      '<div class="output-placeholder" id="output-placeholder">' +
-      '<svg aria-hidden="true" class="svg-icon" viewBox="0 0 24 24"><use href="#icon-braces"/></svg>' +
-      _i18n.t('outputPlaceholder') +
-      '</div>';
+    area.innerHTML = '';
     renderLineNumbers(0);
   }
 
@@ -2742,7 +2738,6 @@
       upload: '上传', save: '保存', openFile: '打开文件',
       clear: '清空', clearContent: '清空', input: '输入', output: '输出',
       dropHint: '释放以加载文件',
-      outputPlaceholder: '格式化后的 JSON 将显示在这里',
       history: '历史记录', compare: '对比', swap: '交换', close: '关闭',
       moreOps: '更多操作', cancelMore: '取消',
       statusReady: '就绪',
@@ -2817,9 +2812,7 @@
       copy: 'Copy', download: 'Download', downloadFile: 'Download',
       upload: 'Upload', save: 'Save', openFile: 'Open File',
       clear: 'Clear', clearContent: 'Clear', input: 'Input', output: 'Output',
-      dropHint: 'Drop to load file',
-      outputPlaceholder: 'Formatted JSON will appear here',
-      history: 'History', compare: 'Compare', swap: 'Swap', close: 'Close',
+      dropHint: 'Drop to load file',      history: 'History', compare: 'Compare', swap: 'Swap', close: 'Close',
       moreOps: 'More Actions', cancelMore: 'Cancel',
       statusReady: 'Ready',
       statusShortcuts: 'Ctrl+Enter Format · Ctrl+S Save · Ctrl+D Download · Ctrl+F Search',
@@ -2893,9 +2886,7 @@
       copy: 'Copiar', download: 'Descargar', downloadFile: 'Descargar',
       upload: 'Subir', save: 'Guardar', openFile: 'Abrir archivo',
       clear: 'Limpiar', clearContent: 'Limpiar', input: 'Entrada', output: 'Salida',
-      dropHint: 'Suelta para cargar archivo',
-      outputPlaceholder: 'El JSON formateado aparecerá aquí',
-      history: 'Historial', compare: 'Comparar', swap: 'Intercambiar', close: 'Cerrar',
+      dropHint: 'Suelta para cargar archivo',      history: 'Historial', compare: 'Comparar', swap: 'Intercambiar', close: 'Cerrar',
       moreOps: 'Más acciones', cancelMore: 'Cancelar',
       statusReady: 'Listo',
       statusShortcuts: 'Ctrl+Enter Formatear · Ctrl+S Guardar · Ctrl+D Descargar · Ctrl+F Buscar',
@@ -2969,9 +2960,7 @@
       copy: 'Kopieren', download: 'Herunterladen', downloadFile: 'Herunterladen',
       upload: 'Hochladen', save: 'Speichern', openFile: 'Datei öffnen',
       clear: 'Leeren', clearContent: 'Leeren', input: 'Eingabe', output: 'Ausgabe',
-      dropHint: 'Zum Laden loslassen',
-      outputPlaceholder: 'Formatiertes JSON wird hier angezeigt',
-      history: 'Verlauf', compare: 'Vergleichen', swap: 'Tauschen', close: 'Schließen',
+      dropHint: 'Zum Laden loslassen',      history: 'Verlauf', compare: 'Vergleichen', swap: 'Tauschen', close: 'Schließen',
       moreOps: 'Weitere Aktionen', cancelMore: 'Abbrechen',
       statusReady: 'Bereit',
       statusShortcuts: 'Strg+Eingabe Formatieren · Strg+S Speichern · Strg+D Herunterladen · Strg+F Suchen',
@@ -3045,9 +3034,7 @@
       copy: 'コピー', download: 'ダウンロード', downloadFile: 'ダウンロード',
       upload: 'アップロード', save: '保存', openFile: 'ファイルを開く',
       clear: 'クリア', clearContent: 'クリア', input: '入力', output: '出力',
-      dropHint: 'ドロップしてファイルを読み込み',
-      outputPlaceholder: '整形されたJSONがここに表示されます',
-      history: '履歴', compare: '比較', swap: '入れ替え', close: '閉じる',
+      dropHint: 'ドロップしてファイルを読み込み',      history: '履歴', compare: '比較', swap: '入れ替え', close: '閉じる',
       moreOps: 'その他の操作', cancelMore: 'キャンセル',
       statusReady: '準備完了',
       statusShortcuts: 'Ctrl+Enter 整形 · Ctrl+S 保存 · Ctrl+D ダウンロード · Ctrl+F 検索',
