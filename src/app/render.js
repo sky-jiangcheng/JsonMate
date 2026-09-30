@@ -66,11 +66,7 @@
   function renderEmptyContent() {
     var area = document.getElementById('output-content-area');
     if (!area) return;
-    area.innerHTML =
-      '<div class="output-placeholder" id="output-placeholder">' +
-      '<svg aria-hidden="true" class="svg-icon" viewBox="0 0 24 24"><use href="#icon-braces"/></svg>' +
-      _i18n.t('outputPlaceholder') +
-      '</div>';
+    area.innerHTML = '';
     renderLineNumbers(0);
   }
 

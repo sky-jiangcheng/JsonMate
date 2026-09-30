@@ -114,7 +114,6 @@ async function testErrorFlow() {
       if (!a) return 'no-area';
       if (a.querySelector('.error-display')) return 'error';
       if (a.querySelector('.json-tree')) return 'tree';
-      if (a.querySelector('.output-placeholder')) return 'placeholder';
       return 'other';
     });
 

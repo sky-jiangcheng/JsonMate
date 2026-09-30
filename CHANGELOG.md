@@ -841,3 +841,11 @@
 - `manifest.json` 与 `package.json` 的 `description` 改为英文（面向应用商店索引与搜索场景；PWA `name` / 窗口标题等展示名保持 `HushJSON: JSON Formatter` 不变）
 - 英文版 README 转正为仓库默认首页 `README.md`，中文版更名 `README.zh-CN.md`（GitHub 仓库页固定渲染 `README.md`，默认显示英文以与英文 About/topics 一致；两份文件顶部语言切换链接同步更新）
 
+---
+
+## [1.5.84] - 2026-09-30
+
+### Removed
+- 输出区空状态的占位文案（「格式化后的 JSON 将显示在这里」，5 种语言）与大括号装饰图标全部移除，空状态仅保留空白画布。静态 HTML 初始块、`render.js` 的空状态重建逻辑、5 语言 i18n 键、`.output-placeholder` CSS 规则（桌面 + 移动端分组选择器）与不再被引用的 `icon-braces` SVG symbol 一并清理
+- 测试状态机 `output-state.spec.mjs` 的 `placeholder` 分类分支随元素移除（现有断言只覆盖 tree / error 流转，不受影响）
+
