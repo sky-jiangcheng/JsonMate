@@ -99,6 +99,11 @@
     outputType: 'empty',   // 'empty' | 'text' | 'json'
     outputFixed: false,
     outputParsed: null,
+    // 输出区当前显示的是解析错误时为 { error, input }。
+    // 错误也必须走 store: 之前 renderErrorOutput 直接写 innerHTML 而不动
+    // output/outputType, 于是"格式化 A 成功 → 格式化失败(显示错误) → 改回 A
+    // 再格式化"会被订阅者的 _lastRenderContent 守卫判成"没变化", 错误页残留。
+    outputError: null,
     lang: localStorage.getItem('appLang') || 'en',
     theme: localStorage.getItem('theme') || 'light',
     selectedIds: [],
@@ -117,8 +122,8 @@
     _lastRenderType: 'empty',
     _lastRenderFixed: false,
     _lastRenderParsedObj: null,
+    _lastRenderError: null,
     _compareScrollController: null,
-    _platform: null, // Track current platform: 'desktop' | 'mobile' | 'ios' | 'android' | 'tauri'
   };
 
   var _subscribers = [];
@@ -128,11 +133,6 @@
   function setState(partial) {
     for (var key in partial) {
       if (partial.hasOwnProperty(key)) _state[key] = partial[key];
-    }
-    // Sync platform tracking to localStorage for persistence
-    if (partial._platform) {
-      localStorage.setItem('appPlatform', partial._platform);
-      _state._platform = partial._platform;
     }
     for (var i = 0; i < _subscribers.length; i++) _subscribers[i](_state);
   }
@@ -182,12 +182,22 @@
     });
   }
 
+  /** 值本身是否是可解析的 JSON 文本 */
+  function isJsonText(v) {
+    if (typeof v !== 'string' || !v) return false;
+    try { JSON.parse(v); return true; } catch (_) { return false; }
+  }
+
+  // 老版本记录可能长得跟现在不一样。字段名白名单之外的字符串值一律不认作内容,
+  // 否则 name/label 会被误当成 JSON({name:'foo'} 这种记录读出来内容就成了 "foo")。
+  var NON_CONTENT_KEYS = { id: 1, _id: 1, name: 1, title: 1, label: 1 };
+
   function normalizeHistoryItem(raw) {
     if (!raw || typeof raw !== 'object') return null;
+    // id 必须跨次读取稳定: 之前用 Date.now()+random 兜底, 每次 getHistory() 都换,
+    // 而删除/勾选走的是"重新 getHistory 再按 id 比对", 结果永远比不中 —— 老记录删不掉。
+    // 这里用 内容+下标 做确定性派生, 同一份存储多次读出同一个 id。
     var id = String(raw.id || raw._id || '');
-    if (!id) id = 'legacy-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-    var name = String(raw.name || raw.title || raw.label || '');
-    if (!name) name = 'untitled';
     var content = '';
     // 跨版本字段兼容：历史上可能用过 content / json / text / data / value 等字段存内容
     if (typeof raw.content === 'string') content = raw.content;
@@ -195,19 +205,33 @@
     else if (typeof raw.text === 'string') content = raw.text;
     else if (typeof raw.data === 'string') content = raw.data;
     else if (typeof raw.value === 'string') content = raw.value;
-    // 老版本 {id, entries:[...]} 这种容器对象也尝试兜底取出第一个字符串
+    // 老版本 {id, entries:[...]} 这种容器对象: 取第一个字符串元素
+    else if (Array.isArray(raw.entries) && typeof raw.entries[0] === 'string') content = raw.entries[0];
     else if (raw && typeof raw === 'object') {
       for (var k in raw) {
+        if (NON_CONTENT_KEYS[k]) continue;
         var v = raw[k];
-        if (typeof v === 'string' && v.length > 0 && /[{["\d\-tfnsu]/.test(v.charAt(0) === ' ' ? v.trimLeft().charAt(0) : v.charAt(0))) {
-          content = v;
-          break;
-        }
+        if (isJsonText(v)) { content = v; break; }
       }
     }
-    // 如果字符串本身是 stringify 过的一层 shell ("\"...\"") 就解一次
+    if (!id) {
+      // 只用 内容+名称 派生, 不掺下标: 掺了下标的话删掉别的记录后 id 会跟着变。
+      var sum = 0, seed = content + '|' + String(raw.name || '');
+      for (var s = 0; s < seed.length; s++) sum = (sum * 31 + seed.charCodeAt(s)) >>> 0;
+      id = 'legacy-' + sum.toString(36);
+    }
+    var name = String(raw.name || raw.title || raw.label || '');
+    if (!name) name = 'untitled';
+    // 老版本可能把内容多 stringify 了一层(如 "{\"a\":1}")。仅当脱一层之后
+    // 内层仍是合法 JSON 时才脱壳: 顶层 JSON 字符串本身就是合法 JSON,
+    // 无条件脱壳会把 "hello" 变成非法的 hello, 该记录重载后再也格式化不了。
     if (content && content.length > 2 && content.charCodeAt(0) === 34 && content.charCodeAt(content.length - 1) === 34) {
-      try { content = JSON.parse(content); } catch (_) {}
+      try {
+        var unwrapped = JSON.parse(content);
+        if (typeof unwrapped === 'string') {
+          try { JSON.parse(unwrapped); content = unwrapped; } catch (_inner) { /* 内层不是 JSON: 原样保留 */ }
+        }
+      } catch (_) {}
     }
     // 单条超大记录的降级提示：不丢弃数据，但后续调用方可以根据 size 决定 UI 提示
     var sizeBytes = content.length;
@@ -224,13 +248,29 @@
     }
     if (!Array.isArray(raw)) return [];
     var out = [];
+    var seen = {};
     for (var i = 0; i < raw.length; i++) {
       var n = normalizeHistoryItem(raw[i]);
-      if (n) out.push(n);
+      if (!n) continue;
+      // 派生 id 理论上会撞（两条内容与名称都相同的无 id 老记录）。
+      // 撞了就加序号后缀, 否则按 id 删除会把两条一起删掉。
+      if (seen[n.id] !== undefined) {
+        seen[n.id]++;
+        n.id = n.id + '-' + seen[n.id];
+        while (seen[n.id] !== undefined) { seen[n.id]++; n.id = n.id.replace(/-\d+$/, '') + '-' + seen[n.id]; }
+      } else {
+        seen[n.id] = 0;
+      }
+      out.push(n);
     }
     return out;
   }
 
+  /**
+   * 写入历史记录。返回 true = 已落盘, false = 两次写入都失败。
+   * 失败时**保留 localStorage 里的原有数据**并返回 false, 由调用方提示用户;
+   * 绝不能 removeItem —— 那会把用户全部历史静默删掉。
+   */
   function setHistory(arr) {
     try {
       // 裁剪上限,避免超大历史撑爆 localStorage 配额
@@ -243,6 +283,7 @@
         arr = normalized;
       }
       localStorage.setItem('jsonHistory', JSON.stringify(arr));
+      return true;
     } catch (e) {
       // 配额满/序列化失败时静默降级: 尝试只保留最近的 20 条再写一次
       console.warn('[actions] setHistory failed, trimming:', e);
@@ -255,8 +296,11 @@
           }
           localStorage.setItem('jsonHistory', JSON.stringify(trimmed));
         }
+        return true;
       } catch (e2) {
-        try { localStorage.removeItem('jsonHistory'); } catch (_) {}
+        // 二次写入仍失败: 不动已有键, 旧历史原样保留, 返回 false 让调用方报错
+        console.warn('[actions] setHistory 仍失败, 已保留原有历史记录(未删除):', e2);
+        return false;
       }
     }
   }
@@ -345,12 +389,16 @@
     var fixed = false;
     var fixMsg = '';
     var error = null;
+    // BOM: Windows 工具导出的 .json 常带 \uFEFF, JSON.parse 直接抛
+    // "Unexpected token '﻿'" —— 那不是用户的 JSON 写错了, 不该报"JSON 无效",
+    // 后续 tryFixJson 也因为 stack 为空(括号本来就平衡)帮不上忙。
+    var text = value && value.charCodeAt(0) === 0xFEFF ? value.slice(1) : value;
 
     try {
-      jsonObj = JSON.parse(value);
+      jsonObj = JSON.parse(text);
     } catch (err) {
       error = err;
-      var v = value;
+      var v = text;
       var uq = tryFixUnquotedKeys(v);
       if (uq !== v) {
         try {
@@ -377,15 +425,15 @@
             fixed = true;
             fixMsg = fixMsg || 'autoBracket';
           } catch (e2) {
-            return { error: err, input: value };
+            return { error: err, input: text };
           }
         } else {
-          return { error: err, input: value };
+          return { error: err, input: text };
         }
       }
     }
 
-    return { json: jsonObj, fixed: fixed, fixMsg: fixMsg, input: value };
+    return { json: jsonObj, fixed: fixed, fixMsg: fixMsg, input: text };
   }
 
   /* ==============================================================
@@ -449,6 +497,9 @@
       outputFixed: false,
       outputParsed: null,
       lastDetailContent: '',
+      // 清空后编辑器内容已经不再是"从某条历史记录载入的那条",
+      // 不重置的话接着输入新 JSON 再 Ctrl+S 会命中覆盖分支, 悄悄改掉旧记录
+      loadedHistoryId: null,
     };
   }
 
@@ -652,11 +703,16 @@
     if (contentEl) contentEl.onscroll = syncLineNumberScroll;
   }
 
-  function renderRegularOutput(content) {
+  function renderRegularOutput(content, parsedObj) {
     var area = document.getElementById('output-content-area');
     if (!area) return;
-    var obj;
-    try { obj = JSON.parse(content); } catch (e) { obj = null; }
+    // 优先复用 store 里已解析好的对象: format/minify 链路本来就 parse 过一遍,
+    // 这里再 JSON.parse 一次等于对超大 JSON 白付一次全树解析 + 一次字符串分配。
+    // parsedObj 为 null/undefined(例如从历史记录载入、只存了文本)时才回退到解析。
+    var obj = parsedObj;
+    if (obj === null || obj === undefined) {
+      try { obj = JSON.parse(content); } catch (e) { obj = null; }
+    }
     var treeHtml = obj !== null
       ? renderJsonNode(null, obj)
       : '<pre><code class="language-json hljs">' + _actions.escapeHtml(content) + '</code></pre>';
@@ -1116,6 +1172,8 @@
       outputType: type,
       outputFixed: !!fixed,
       outputParsed: parsedObj || null,
+      // 任何一次正常输出渲染都清掉错误态, 由订阅者负责把错误页换掉
+      outputError: null,
     };
     _store.setState(state);
   }
@@ -1354,6 +1412,14 @@
   // (如 {"a/b":1} vs {"a":{"b":1}}) 两条不同路径映射到同一个 map key, 高亮互相覆盖
   var PATH_SEP = '\u0000';
 
+  // 判键是否存在必须走自有属性: `key in obj` 会命中 Object.prototype 上的
+  // toString/valueOf/constructor 等, 于是 {"toString":...} 这类正常 JSON 会被
+  // 判成"两边都有该键", 取到 a['toString'] 是个函数, renderJsonNode 对函数
+  // 返回空串 → 整行凭空消失, 右侧还被标成 changed。
+  function hasOwnKey(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
   function diffJson(a, b) {
     if (a === b) return { t: 'same', v: a };
     var ta = typeof a, tb = typeof b;
@@ -1381,8 +1447,8 @@
     allKeys.sort();
     for (var i = 0; i < allKeys.length; i++) {
       var key = allKeys[i];
-      if (!(key in a)) { children.push({ k: key, d: { t: 'add', v: b[key] } }); hasDiff = true; }
-      else if (!(key in b)) { children.push({ k: key, d: { t: 'rem', v: a[key] } }); hasDiff = true; }
+      if (!hasOwnKey(a, key)) { children.push({ k: key, d: { t: 'add', v: b[key] } }); hasDiff = true; }
+      else if (!hasOwnKey(b, key)) { children.push({ k: key, d: { t: 'rem', v: a[key] } }); hasDiff = true; }
       else { var cd = diffJson(a[key], b[key]); children.push({ k: key, d: cd }); if (cd.t !== 'same') hasDiff = true; }
     }
     return hasDiff ? { t: 'obj', c: children } : { t: 'same', v: a };
@@ -1757,6 +1823,16 @@
   /* ==============================================================
      Platform-aware event handling helpers
   ============================================================== */
+  /**
+   * 写历史 + 失败提示。setHistory 现在在配额满时保留原有数据并返回 false,
+   * 这里负责把"没写进去"告诉用户, 而不是让调用方误报成功。
+   */
+  function persistHistory(history) {
+    if (_actions.setHistory(history) !== false) return true;
+    showToast(_i18n.t('historySaveFailed'), 3500, 'icon-alert-triangle');
+    return false;
+  }
+
   function handleHistoryClick(e) {
     var delBtn = e.target.closest('[data-delete-id]');
     if (delBtn) {
@@ -1765,8 +1841,8 @@
       var history = _actions.getHistory();
       var selectedIds = _store.getStateForKey('selectedIds') || [];
       var result = _actions.deleteHistory(history, id, selectedIds);
-      _actions.setHistory(result.history);
-      _store.setState({ selectedIds: result.selectedIds, _platform: Platform.getPlatform() });
+      if (!persistHistory(result.history)) return true;
+      _store.setState({ selectedIds: result.selectedIds });
       if (_store.getStateForKey('loadedHistoryId') === id) {
         _store.setState({ loadedHistoryId: null });
       }
@@ -1779,7 +1855,7 @@
       var sid = checkbox.dataset.selectId;
       var sel = _store.getStateForKey('selectedIds') || [];
       var newSel = _actions.toggleSelect(sel, sid);
-      _store.setState({ selectedIds: newSel, _platform: Platform.getPlatform() });
+      _store.setState({ selectedIds: newSel });
       renderHistory();
       return true;
     }
@@ -1804,7 +1880,7 @@
         }
         if (_router.isMobileDevice()) toggleSidebar();
         showToast(_i18n.t('loaded', { name: loaded.name }), 2000, 'icon-file-text');
-        _store.setState({ loadedHistoryId: hid, _platform: Platform.getPlatform() });
+        _store.setState({ loadedHistoryId: hid });
       } else {
         // 老版本记录字段不兼容 / 内容为空 → 友好提示不静默失败
         var name = loaded && loaded.name ? loaded.name : (_i18n.t('untitled') || 'untitled');
@@ -1935,7 +2011,9 @@
       overlay.classList.remove('active');
       var file = e.dataTransfer.files[0];
       if (!file) return;
-      if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+      // 后缀判断大小写不敏感: macOS 上 .JSON / .Json 文件很常见,
+      // 而这类文件拖进来时 MIME 常常是空或 application/octet-stream
+      if (!/\.json$/i.test(file.name) && file.type !== 'application/json') {
         showToast(_i18n.t('jsonOnly'), 3000, 'icon-alert-triangle');
         return;
       }
@@ -2076,6 +2154,13 @@
      Error rendering
   ============================================================== */
   function renderErrorOutput(error, input) {
+    // 错误态必须进 store。之前这里直接写 area.innerHTML 而不动 output/outputType,
+    // 于是"格式化 A 成功 → 改坏格式化失败(显示错误) → 改回 A 再格式化成功"时,
+    // 订阅者按 _lastRenderContent 判定"输出没变"而跳过重绘, 页面停在错误视图。
+    _store.setState({ outputError: { error: error, input: input } });
+  }
+
+  function drawErrorDisplay(error, input) {
     var msg = getFriendlyJsonError(error, input);
     var posMatch = error.message.match(/position\s+(\d+)/i);
     var pos = posMatch ? parseInt(posMatch[1]) : -1;
@@ -2373,8 +2458,9 @@
         return;
       }
     }
-    // 单条历史大小上限: 超大 JSON 会迅速写满 localStorage 配额,
-    // setHistory 降级裁剪失败后会把整个 jsonHistory 键删除, 用户历史静默全丢
+    // 单条历史大小上限: 超大 JSON 会迅速写满 localStorage 配额。
+    // 超限时直接拒绝并提示, 避免把整份历史挤到配额边缘(配额满时 setHistory
+    // 会保留原有数据并返回 false, 由 persistHistory 报错, 不再静默丢历史)
     if (content.length > HISTORY_MAX_CHARS) {
       showToast(_i18n.t('historyTooLarge'), 2500, 'icon-alert-triangle');
       return;
@@ -2397,7 +2483,8 @@
       if (idx >= 0) {
         history[idx].name = finalName;
         history[idx].content = content;
-        _actions.setHistory(history);
+        // 写失败时保持弹窗打开(输入不丢), 已提示用户, 不再谎报"已更新"
+        if (!persistHistory(history)) return;
         closeSaveModal();
         renderHistory();
         showToast(_i18n.t('historyUpdated', { name: finalName }), 2000, 'icon-save');
@@ -2410,7 +2497,7 @@
     var entry = _actions.confirmSave(content, finalName);
     var history2 = _actions.getHistory();
     history2.unshift(entry);
-    _actions.setHistory(history2);
+    if (!persistHistory(history2)) return;
     closeSaveModal();
     renderHistory();
     showToast(_i18n.t('saved', { name: entry.name }), 2000, 'icon-save');
@@ -2444,7 +2531,7 @@
     clearTimeout(_clearHistoryTimer);
     _clearHistoryArmed = false;
     var result = _actions.clearAllHistory();
-    _actions.setHistory(result.history);
+    if (!persistHistory(result.history)) return;
     _store.setState({ selectedIds: result.selectedIds, loadedHistoryId: null });
     renderHistory();
     showToast(_i18n.t('historyCleared'), 2000, 'icon-trash');
@@ -2458,7 +2545,12 @@
     var type = _store.getStateForKey('outputType') || 'empty';
     var fixed = _store.getStateForKey('outputFixed') || false;
     var parsed = _store.getStateForKey('outputParsed') || null;
-    if (output) {
+    var err = _store.getStateForKey('outputError');
+    if (err) {
+      // 错误标题/规则提示都是本地化的, 换语言后按新语言重画错误页
+      _store.setState({ _lastRenderError: null });
+      renderErrorOutput(err.error, err.input);
+    } else if (output) {
       // Force a re-render: the store subscriber guards on _lastRenderContent,
       // so reset it to bypass the guard and let the JSON tree re-localize its
       // "N items"/"N keys" labels under the new language.
@@ -2501,29 +2593,41 @@
     // format/minify/stringify -> renderOutput() 只 setState,
     // 这里检测 output 状态变化后真正渲染 DOM, 保证状态与视图永远同步
     _store.subscribe(function (state) {
-      if (state.output !== state._lastRenderContent || state.outputType !== state._lastRenderType) {
-        // 先打标记再渲染: 渲染函数内部的 renderLineNumbers 等会触发 setState,
-        // 重入此订阅者时变更检测不再成立, 避免无限递归
-        _store.setState({
-          _lastRenderContent: state.output,
-          _lastRenderType: state.outputType,
-          _lastRenderFixed: state.outputFixed,
-          _lastRenderParsedObj: state.outputParsed,
-        });
-        if (!state.output || state.outputType === 'empty') {
-          renderEmptyContent();
-        } else if (state.outputType === 'text') {
-          renderTextOutput(state.output);
-        } else {
-          renderRegularOutput(state.output);
-        }
-        // 移动端: 仅在输出真正变化时切到 output tab（避免每次 setState 都切）
-        if (state.outputType && state.outputType !== 'empty' && _router.isMobileDevice()) {
-          switchMobileTab('output');
-        }
-        // 输出已重建: 刷新搜索高亮, 防止存储的 <mark> 节点失效
-        restoreSearchHighlights();
+      var errChanged = state.outputError !== state._lastRenderError;
+      var outChanged = state.output !== state._lastRenderContent
+        || state.outputType !== state._lastRenderType;
+
+      if (state.outputError) {
+        if (!errChanged) return;
+        // 同样是先打标记再渲染, 避免下面 drawErrorDisplay 内部的 setState 重入
+        _store.setState({ _lastRenderError: state.outputError });
+        drawErrorDisplay(state.outputError.error, state.outputError.input);
+        if (_router.isMobileDevice()) switchMobileTab('output');
+        return;
       }
+      if (!errChanged && !outChanged) return;
+      // 先打标记再渲染: 渲染函数内部的 renderLineNumbers 等会触发 setState,
+      // 重入此订阅者时变更检测不再成立, 避免无限递归
+      _store.setState({
+        _lastRenderContent: state.output,
+        _lastRenderType: state.outputType,
+        _lastRenderFixed: state.outputFixed,
+        _lastRenderParsedObj: state.outputParsed,
+        _lastRenderError: null,
+      });
+      if (!state.output || state.outputType === 'empty') {
+        renderEmptyContent();
+      } else if (state.outputType === 'text') {
+        renderTextOutput(state.output);
+      } else {
+        renderRegularOutput(state.output, state.outputParsed);
+      }
+      // 移动端: 仅在输出真正变化时切到 output tab（避免每次 setState 都切）
+      if (state.outputType && state.outputType !== 'empty' && _router.isMobileDevice()) {
+        switchMobileTab('output');
+      }
+      // 输出已重建: 刷新搜索高亮, 防止存储的 <mark> 节点失效
+      restoreSearchHighlights();
     });
   }
 
@@ -2677,6 +2781,7 @@
       unnamed: '未命名', noHistory: '暂无历史记录', noHistoryHint: '格式化后保存即可',
       selectForCompare: '选中用于对比', deleteItem: '删除',
       historyTooLarge: '记录过大，无法保存（上限 500KB）',
+      historySaveFailed: '存储空间不足，历史记录未保存（原有记录已保留）',
       legacyEmptySnippet: '[空记录]',
       legacyHistoryUnavailable: '无法加载“{name}”（旧版格式不兼容）。可先备份内容后删除该记录。',
       autoQuoteId: '（已自动为标识符添加引号）',
@@ -2752,6 +2857,7 @@
       unnamed: 'Untitled', noHistory: 'No history yet', noHistoryHint: 'Format and save to see history',
       selectForCompare: 'Select to compare', deleteItem: 'Delete',
       historyTooLarge: 'Entry too large to save (max 500KB)',
+      historySaveFailed: 'Out of storage space; history was not saved (existing entries kept)',
       legacyEmptySnippet: '[empty entry]',
       legacyHistoryUnavailable: 'Cannot load "{name}" (legacy format unavailable). Back up the content, then delete it.',
       autoQuoteId: ' (auto-quoted identifier)',
@@ -2827,6 +2933,7 @@
       unnamed: 'Sin título', noHistory: 'Aún no hay historial', noHistoryHint: 'Formatea y guarda para ver el historial',
       selectForCompare: 'Selecciona para comparar', deleteItem: 'Eliminar',
       historyTooLarge: 'Entrada demasiado grande para guardar (máx 500KB)',
+      historySaveFailed: 'Espacio de almacenamiento insuficiente; el historial no se guardó (se conservan las entradas existentes)',
       legacyEmptySnippet: '[entrada vacía]',
       legacyHistoryUnavailable: 'No se puede cargar "{name}" (formato antiguo no disponible). Haz una copia de seguridad y luego bórralo.',
       autoQuoteId: ' (identificador entre comillas automáticamente)',
@@ -2902,6 +3009,7 @@
       unnamed: 'Unbenannt', noHistory: 'Noch kein Verlauf', noHistoryHint: 'Formatieren und speichern, um Verlauf zu sehen',
       selectForCompare: 'Zum Vergleichen auswählen', deleteItem: 'Löschen',
       historyTooLarge: 'Eintrag zu groß zum Speichern (max. 500 KB)',
+      historySaveFailed: 'Zu wenig Speicherplatz; der Verlauf wurde nicht gespeichert (bestehende Einträge bleiben erhalten)',
       legacyEmptySnippet: '[leerer Eintrag]',
       legacyHistoryUnavailable: '"{name}" kann nicht geladen werden (altes Format nicht verfügbar). Sichere den Inhalt und lösche ihn dann.',
       autoQuoteId: ' (Bezeichner automatisch in Anführungszeichen gesetzt)',
@@ -2977,6 +3085,7 @@
       unnamed: '名称未設定', noHistory: '履歴はまだありません', noHistoryHint: '整形して保存すると履歴が表示されます',
       selectForCompare: '比較用に選択', deleteItem: '削除',
       historyTooLarge: '項目が大きすぎて保存できません（最大500KB）',
+      historySaveFailed: '保存容量が不足しているため、履歴を保存できませんでした（既存履歴は保持されています）',
       legacyEmptySnippet: '[空の項目]',
       legacyHistoryUnavailable: '"{name}"を読み込めません（旧形式は利用できません）。内容をバックアップしてから削除してください。',
       autoQuoteId: '（識別子に自動で引用符を付与）',
@@ -3330,7 +3439,9 @@
         var history = (window.__actions && window.__actions.getHistory()) || [];
         var selectedIds = (window.__store && window.__store.getStateForKey('selectedIds')) || [];
         var result = (window.__actions && window.__actions.deleteHistory) ? window.__actions.deleteHistory(history, id, selectedIds) : { history: history, selectedIds: selectedIds };
-        if (window.__actions && window.__actions.setHistory) window.__actions.setHistory(result.history);
+        var written = (window.__actions && window.__actions.setHistory) ? window.__actions.setHistory(result.history) : true;
+        // 未落盘(配额满): 按 localStorage 里的旧数据重绘, 不更新选中态
+        if (written === false) { if (render.renderHistory) render.renderHistory(); return; }
         if (window.__store) window.__store.setState({ selectedIds: result.selectedIds });
         if (render.renderHistory) render.renderHistory();
       },
@@ -3392,9 +3503,12 @@
 
     // Initialize store with persisted values
     if (window.__store) {
-      var persistedLang = localStorage.getItem('appLang') || 'en';
+      // 语言以顶部 i18n._lang 为准（它已按"显式保存 → 系统语言 → en"决定）。
+      // 这里绝不能在没有用户选择时回写 'en'：那会让首次访问的会话看着是系统
+      // 语言、刷新一次就永久变成英文 —— 顶部 detectInitialLang 的注释特意警告过。
+      if (localStorage.getItem('appLang')) window.__store.persistLang(i18n._lang);
+      else window.__store.setState({ lang: i18n._lang });
       var persistedTheme = localStorage.getItem('theme') || 'light';
-      window.__store.persistLang(persistedLang);
       window.__store.persistTheme(persistedTheme);
     }
 
