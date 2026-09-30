@@ -812,12 +812,19 @@
 - 命名分层重排：`productName` / 页头 Logo / 图标标签 / PWA `short_name` / 水印默认值取短品牌 `HushJSON`；窗口标题 / HTML `<title>` / PWA `name` / 隐私政策取完整展示名
 - 图标标签与 `CFBundleName` 从 `JSON Formatter` 变为 `HushJSON`（8 字符，此前 23 字符的完整名会被系统截断成 `Advanced JSON...`）；`release.yml` 里的 PlistBuddy 改写与归档断言同步更新，改写机制保留但理由改为"钉成确定值并复验"
 - README / ARCHITECTURE / CONTRIBUTING / SECURITY 的命名分层表按新事实重写
+- 仓库与包标识同步改名为 `hush-json`：GitHub slug、npm / Cargo `name`、Pages 路径、`sw.js` 的 `CACHE_NAME` 前缀、`Cargo.toml` 的 repository、Issue 模板与文档内 URL
+
+### Breaking
+- **GitHub Pages 站点地址由 `/advanced-json-formatter/` 变为 `/hush-json/`**。GitHub 官方明确仓库改名的重定向**不包含 project site URL**，旧地址会直接 404：已安装的 PWA（其图标指向旧 `start_url`）与一切引用旧地址的外部页面随之失效。当前没有自定义域名可用作缓解。
+- App Store Connect 的隐私政策 URL 此前指向 `https://sky-jiangcheng.github.io/advanced-json-formatter/privacy.html`，必须同步改为 `https://sky-jiangcheng.github.io/hush-json/privacy.html`，否则该链接在审核面失效。
 
 ### Fixed
 - 隐私政策里残留的最早一代名称括注 `（JSON Beautify Tool）` 已移除
 
 ### Notes
-- **标识层刻意不动**：GitHub slug、npm / Cargo `name`、Pages 路径、`sw.js` 的 `CACHE_NAME` 前缀仍为 `advanced-json-formatter`；Apple Bundle ID 仍为已被锁定的 `com.jsonbeautify.desktop.appstore[.ios]`。因此"展示名 / 包标识 / Bundle ID"三层不一致是设计结果，改品牌不再牵动 URL、包名与已装用户升级链
+- 标识层改名连带的 5 处硬失败点已全部处理并实跑验证：`src-tauri/src/main.rs` 的 crate 路径（Rust 把 `hush-json` 规范化为 `hush_json`，不改则编译失败）、`gen/apple/<包名>.xcodeproj`（`release.yml` 改为 `find` 探测，不再写死）、`sw.js` 前缀与 `Cargo.lock` 条目的正则（改为从 `package.json` 的 name 派生）、`manifest.json` 的 `start_url`/`scope`（必须等于 Pages 路径）
+- 旧仓库名 `advanced-json-formatter` 今后**不可复用**：一旦用它新建仓库，GitHub 对现仓库的重定向即失效
+- 唯一仍不动的标识是 Apple Bundle ID：`com.jsonbeautify.desktop.appstore[.ios]` 已被 Apple 锁定，与品牌无关
 - App Store 上架名需在 App Store Connect 元数据里改为 `HushJSON: JSON Formatter`，该字段不由仓库承载
 - 已在设置里保存过水印文字的老用户，其 `localStorage.appSettings.watermarkText` 仍是旧值（该字段用户可编辑，不做迁移）
 
