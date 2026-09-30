@@ -1,7 +1,7 @@
 {
   "name": "hush-json",
-  "version": "1.5.82",
-  "description": "HushJSON: JSON Formatter - Tauri 桌面应用",
+  "version": "1.5.83",
+  "description": "HushJSON: JSON Formatter - pure frontend JSON formatter, validator, minifier and diff tool (Web / Tauri desktop / iOS)",
   "private": true,
   "scripts": {
     "tauri": "tauri",

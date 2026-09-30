@@ -828,3 +828,15 @@
 - App Store 上架名需在 App Store Connect 元数据里改为 `HushJSON: JSON Formatter`，该字段不由仓库承载
 - 已在设置里保存过水印文字的老用户，其 `localStorage.appSettings.watermarkText` 仍是旧值（该字段用户可编辑，不做迁移）
 
+---
+
+## [1.5.83] - 2026-09-30
+
+### Added
+- 新增英文版 README（`README.en.md`），与中文版顶部互相链接。英文版覆盖全部章节（核心特性 / 界面语言 / 快速开始 / 桌面与 iOS / 命名分层 / PWA / 隐私 / 构建链路等），面向 GitHub 搜索、Trending 与英文社区的传播触达
+- `src/index.html` 补齐 SEO 静态层：`meta description`、`canonical`、Open Graph 与 Twitter Card 标签。meta 层固定英文（它是搜索引擎抓取的静态面，GitHub Pages 落地页无按语言分流的路由，故不用 hreflang）；界面语言仍由 i18n 运行时切换，应用启动时会覆盖 `<html lang>`
+
+### Changed
+- `<html lang>` 静态初始值由 `zh` 改为 `en`，与应用的兜底语言（`localStorage 偏好 → 系统语言 → 英文`）及英文 meta 层一致
+- `manifest.json` 与 `package.json` 的 `description` 改为英文（面向应用商店索引与搜索场景；PWA `name` / 窗口标题等展示名保持 `HushJSON: JSON Formatter` 不变）
+

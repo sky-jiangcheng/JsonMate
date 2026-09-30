@@ -1,5 +1,7 @@
 # HushJSON: JSON Formatter
 
+> 🌐 [English](README.en.md) · **简体中文**
+
 一个现代化的 JSON 格式化、压缩、验证与对比工具。**纯前端、零后端、零数据上传**,支持 Web / 桌面端 / iOS,内置 5 种界面语言。
 
 > **在线使用** → [sky-jiangcheng.github.io/hush-json](https://sky-jiangcheng.github.io/hush-json/)

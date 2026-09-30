@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <!-- 早期同步设置 data-device,避免桌面端闪出移动布局。注意: Tauri CSP 不允许内联脚本,
@@ -9,6 +9,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, shrink-to-fit=no">
     <title>HushJSON: JSON Formatter</title>
+    <!-- 站点 meta 是搜索引擎看到的静态层(GitHub Pages 落地页),固定英文不随 i18n 切换;
+         界面语言由 app.js 运行时解析,启动时会覆盖 <html lang>。 -->
+    <meta name="description" content="Free online JSON formatter, validator, minifier and diff tool. 100% client-side — no backend, no data uploads, works offline as a PWA.">
+    <link rel="canonical" href="https://sky-jiangcheng.github.io/hush-json/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="HushJSON">
+    <meta property="og:title" content="HushJSON: JSON Formatter">
+    <meta property="og:description" content="Format, validate, minify and diff JSON entirely in your browser — no backend, no uploads, works offline.">
+    <meta property="og:url" content="https://sky-jiangcheng.github.io/hush-json/">
+    <meta property="og:image" content="https://sky-jiangcheng.github.io/hush-json/logo.png">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="HushJSON: JSON Formatter">
+    <meta name="twitter:description" content="Format, validate, minify and diff JSON entirely in your browser — no backend, no uploads, works offline.">
+    <meta name="twitter:image" content="https://sky-jiangcheng.github.io/hush-json/logo.png">
     <!-- iOS PWA：以独立应用模式启动，不显示 Safari UI -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
