@@ -950,7 +950,7 @@
   ============================================================== */
   var SETTINGS_KEY = 'appSettings';
   var DEFAULT_SETTINGS = {
-    watermarkText: 'JSON Formatter',
+    watermarkText: 'HushJSON',
     watermarkOpacity: 0.15,
     bgImageData: '',
     bgImageOpacity: 0.25,

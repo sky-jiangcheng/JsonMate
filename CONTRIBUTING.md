@@ -1,6 +1,6 @@
 # 项目规范（CONTRIBUTING）
 
-Advanced JSON Formatter — 本地优先的 JSON 格式化 / 验证 / 对比工具（Tauri v2 桌面 + iOS + 网页）。
+HushJSON（仓库与包标识 `advanced-json-formatter`）— 本地优先的 JSON 格式化 / 验证 / 对比工具（Tauri v2 桌面 + iOS + 网页）。
 
 本文件定义目录归属、构建链路、测试、版本与提交约定，避免「文件散落、重复副本、源真值不清」。
 

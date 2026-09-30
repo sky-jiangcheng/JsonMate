@@ -1,4 +1,4 @@
-# Advanced JSON Formatter
+# HushJSON: JSON Formatter
 
 一个现代化的 JSON 格式化、压缩、验证与对比工具。**纯前端、零后端、零数据上传**,支持 Web / 桌面端 / iOS,内置 5 种界面语言。
 
@@ -101,7 +101,7 @@
 | Deutsch | `de` |
 | 日本語 | `ja` |
 
-> 窗口标题与 PWA 图标标签固定为 `JSON Formatter`(不随语言切换),以保证标题栏在窄窗口下不被截断。页头 Logo 与无障碍名称使用完整名 `Advanced JSON Formatter`。
+> 窗口标题固定为 `HushJSON: JSON Formatter`、页头 Logo 与图标标签固定为 `HushJSON`(均不随语言切换)。品牌与品类分离:品牌负责被记住,品类词负责被搜索命中。测试对 `document.title` 有断言。
 
 ---
 
@@ -209,10 +209,14 @@ npm run build:appstore # macOS App Store .pkg
 
 | 位置 | 取值 |
 |------|------|
-| 完整产品名(`productName`、PWA `name`、页头 Logo、隐私政策) | `Advanced JSON Formatter` |
-| 窗口标题、PWA `short_name`、iOS 图标标签 | `JSON Formatter` |
+| 品牌名(`productName`、PWA `short_name`、页头 Logo、iOS/macOS 图标标签、水印默认值) | `HushJSON` |
+| 完整展示名(窗口标题、HTML `<title>`、PWA `name`、隐私政策标题) | `HushJSON: JSON Formatter` |
+| 仓库与包标识(GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀) | `advanced-json-formatter` |
+| App Store 上架名 | `HushJSON: JSON Formatter`(在 App Store Connect 元数据里设置,**不由仓库承载**) |
 
 > **Bundle ID 永不随品牌改动** —— `com.jsonbeautify.*` 已被 Apple 锁定,变更会切断升级识别链。
+> 因此"展示名 / 包标识 / Bundle ID"三层**有意不一致**:品牌只存在于展示层,改品牌不触碰 URL、
+> 包名与已装用户的升级链。
 
 ---
 

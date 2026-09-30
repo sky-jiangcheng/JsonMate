@@ -64,6 +64,6 @@ Entries discovered by the Agent during task execution should follow this format:
 - Context: Discovered by Agent while renaming product to JsonMate; user corrected App Store Bundle IDs
 - Category: Operations & Deployment
 - Instructions:
-  - 产品展示名是 Advanced JSON Formatter（窗口标题与图标短名 JSON Formatter，包名 advanced-json-formatter）；GitHub 仓库为 sky-jiangcheng/advanced-json-formatter，Pages 路径为 /advanced-json-formatter/
+  - 品牌名 HushJSON（productName / 页头 Logo / 图标标签 / PWA short_name）；完整展示名 `HushJSON: JSON Formatter`（窗口标题 / HTML title / PWA name）；包名与仓库标识仍是 advanced-json-formatter，GitHub 仓库 sky-jiangcheng/advanced-json-formatter，Pages 路径 /advanced-json-formatter/。展示层与标识层故意不一致：改品牌不动 URL 与升级链
   - Apple 锁死的 Bundle ID 是 jsonbeautify，不是 jsonnest：macOS App Store `com.jsonbeautify.desktop.appstore`，iOS App Store `com.jsonbeautify.desktop.appstore.ios`
   - 对应文件：src-tauri/tauri.appstore.conf.json、src-tauri/tauri.ios.conf.json、src-tauri/Entitlements.plist（application-identifier 前缀 Team ID M3A6LK593A）、.github/workflows/release.yml 的 exportOptions.plist provisioningProfiles key

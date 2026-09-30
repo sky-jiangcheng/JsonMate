@@ -1,7 +1,7 @@
 {
   "name": "advanced-json-formatter",
-  "version": "1.5.81",
-  "description": "Advanced JSON Formatter - Tauri 桌面应用",
+  "version": "1.5.82",
+  "description": "HushJSON: JSON Formatter - Tauri 桌面应用",
   "private": true,
   "scripts": {
     "tauri": "tauri",

@@ -805,3 +805,19 @@
 - `scripts/test-tauri-detection.js` 移入 `tests/tauri-detection.spec.mjs`（转 ESM、自带静态服务，不再依赖外部 `:8765`）
 - CI `Layout Smoke Tests` 现依次执行三个 spec；此前测试命令是逐文件写死的，新增 spec 不接线就不会跑
 
+## [1.5.82] - 2026-09-30
+
+### Changed
+- 品牌名由 `Advanced JSON Formatter` 改为 **`HushJSON`**，完整展示名为 **`HushJSON: JSON Formatter`**（24 字符，符合 App Store 30 字符上限）
+- 命名分层重排：`productName` / 页头 Logo / 图标标签 / PWA `short_name` / 水印默认值取短品牌 `HushJSON`；窗口标题 / HTML `<title>` / PWA `name` / 隐私政策取完整展示名
+- 图标标签与 `CFBundleName` 从 `JSON Formatter` 变为 `HushJSON`（8 字符，此前 23 字符的完整名会被系统截断成 `Advanced JSON...`）；`release.yml` 里的 PlistBuddy 改写与归档断言同步更新，改写机制保留但理由改为"钉成确定值并复验"
+- README / ARCHITECTURE / CONTRIBUTING / SECURITY 的命名分层表按新事实重写
+
+### Fixed
+- 隐私政策里残留的最早一代名称括注 `（JSON Beautify Tool）` 已移除
+
+### Notes
+- **标识层刻意不动**：GitHub slug、npm / Cargo `name`、Pages 路径、`sw.js` 的 `CACHE_NAME` 前缀仍为 `advanced-json-formatter`；Apple Bundle ID 仍为已被锁定的 `com.jsonbeautify.desktop.appstore[.ios]`。因此"展示名 / 包标识 / Bundle ID"三层不一致是设计结果，改品牌不再牵动 URL、包名与已装用户升级链
+- App Store 上架名需在 App Store Connect 元数据里改为 `HushJSON: JSON Formatter`，该字段不由仓库承载
+- 已在设置里保存过水印文字的老用户，其 `localStorage.appSettings.watermarkText` 仍是旧值（该字段用户可编辑，不做迁移）
+

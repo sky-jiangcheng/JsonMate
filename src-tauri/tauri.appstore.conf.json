@@ -1,5 +1,5 @@
 {
-  "productName": "Advanced JSON Formatter",
+  "productName": "HushJSON",
   "identifier": "com.jsonbeautify.desktop.appstore",
   "bundle": {
     "icon": [
@@ -20,8 +20,8 @@
       "files": {
         "embedded.provisionprofile": "./embedded.provisionprofile"
       },
-      "bundleName": "JSON Formatter"
+      "bundleName": "HushJSON"
     }
   },
-  "version": "1.5.81"
+  "version": "1.5.82"
 }

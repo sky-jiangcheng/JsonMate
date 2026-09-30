@@ -50,7 +50,7 @@
   ============================================================== */
   var I18N = {
     zh: {
-      title: 'JSON Formatter', logoText: 'Advanced JSON Formatter', mobTitle: 'JSON工具',
+      title: 'HushJSON: JSON Formatter', logoText: 'HushJSON', mobTitle: 'JSON工具',
       more: '更多', format: '格式化', minify: '压缩', escape: '转义',
       copy: '复制', download: '下载', downloadFile: '下载文件',
       upload: '上传', save: '保存', openFile: '打开文件',
@@ -126,7 +126,7 @@
       bgImageUnsupported: '图片无法显示，当前浏览器不支持该格式',
     },
     en: {
-      title: 'JSON Formatter', logoText: 'Advanced JSON Formatter', mobTitle: 'JSON Tool',
+      title: 'HushJSON: JSON Formatter', logoText: 'HushJSON', mobTitle: 'JSON Tool',
       more: 'More', format: 'Format', minify: 'Minify', escape: 'Escape',
       copy: 'Copy', download: 'Download', downloadFile: 'Download',
       upload: 'Upload', save: 'Save', openFile: 'Open File',
@@ -202,7 +202,7 @@
       bgImageUnsupported: 'Image cannot be displayed, format not supported by this browser',
     },
     es: {
-      title: 'JSON Formatter', logoText: 'Advanced JSON Formatter', mobTitle: 'Herramienta JSON',
+      title: 'HushJSON: JSON Formatter', logoText: 'HushJSON', mobTitle: 'Herramienta JSON',
       more: 'Más', format: 'Formatear', minify: 'Minimizar', escape: 'Escapar',
       copy: 'Copiar', download: 'Descargar', downloadFile: 'Descargar',
       upload: 'Subir', save: 'Guardar', openFile: 'Abrir archivo',
@@ -278,7 +278,7 @@
       bgImageUnsupported: 'La imagen no se puede mostrar, formato no admitido por este navegador',
     },
     de: {
-      title: 'JSON Formatter', logoText: 'Advanced JSON Formatter', mobTitle: 'JSON-Tool',
+      title: 'HushJSON: JSON Formatter', logoText: 'HushJSON', mobTitle: 'JSON-Tool',
       more: 'Mehr', format: 'Formatieren', minify: 'Minimieren', escape: 'Escapen',
       copy: 'Kopieren', download: 'Herunterladen', downloadFile: 'Herunterladen',
       upload: 'Hochladen', save: 'Speichern', openFile: 'Datei öffnen',
@@ -354,7 +354,7 @@
       bgImageUnsupported: 'Bild kann nicht angezeigt werden, Format wird von diesem Browser nicht unterstützt',
     },
     ja: {
-      title: 'JSON Formatter', logoText: 'Advanced JSON Formatter', mobTitle: 'JSONツール',
+      title: 'HushJSON: JSON Formatter', logoText: 'HushJSON', mobTitle: 'JSONツール',
       more: 'その他', format: '整形', minify: '最小化', escape: 'エスケープ',
       copy: 'コピー', download: 'ダウンロード', downloadFile: 'ダウンロード',
       upload: 'アップロード', save: '保存', openFile: 'ファイルを開く',

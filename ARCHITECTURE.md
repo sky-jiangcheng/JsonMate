@@ -1,6 +1,6 @@
 # 架构说明（ARCHITECTURE）
 
-Advanced JSON Formatter 的技术架构、数据流与设计约束。**想改代码前先读这份文档** —— 里面记录了不少「为什么不那样写」的原因，避免重复踩坑。
+HushJSON 的技术架构、数据流与设计约束。**想改代码前先读这份文档** —— 里面记录了不少「为什么不那样写」的原因，避免重复踩坑。
 
 ---
 
@@ -353,7 +353,11 @@ node tests/layout.spec.mjs
 
 | 位置 | 取值 | 理由 |
 |------|------|------|
-| 页头 Logo、无障碍名称、隐私政策 | `Advanced JSON Formatter` | 完整品牌名 |
-| 窗口标题、PWA `short_name`、iOS 图标标签 | `JSON Formatter` | 23 字符在标题栏与图标标签会被截断 |
+| 品牌名：`productName`、页头 Logo、PWA `short_name`、iOS/macOS 图标标签、水印默认值 | `HushJSON` | 8 字符，低于 iOS `CFBundleName` 15 字符上限，标题栏与图标标签都不截断 |
+| 完整展示名：窗口标题、HTML `<title>`、PWA `name`、隐私政策 | `HushJSON: JSON Formatter` | 品牌 + 品类，24 字符符合 App Store 30 字符上限 |
+| 标识层：GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀 | `advanced-json-formatter` | 改动会切断 URL / 已装用户升级链，**不随品牌变** |
+| Apple Bundle ID | `com.jsonbeautify.desktop.appstore[.ios]` | Apple 永久锁定，与品牌无关 |
 
-> 窗口标题**不随语言切换**，各语言共用 `JSON Formatter`。测试对此有断言。
+> 窗口标题**不随语言切换**，各语言共用同一份品牌串。测试对此有断言（`tests/layout.spec.mjs`）。
+> 三层故意不一致是**设计而非遗留**：品牌只存在于展示层，因此改品牌不动 URL、包名与升级链。
+> App Store 上架名（`HushJSON: JSON Formatter`）在 App Store Connect 元数据里设置，仓库不承载该字段。

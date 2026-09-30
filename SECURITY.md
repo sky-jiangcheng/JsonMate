@@ -1,6 +1,6 @@
 # 安全策略（SECURITY）
 
-Advanced JSON Formatter 的安全模型、漏洞上报流程与支持范围。
+HushJSON 的安全模型、漏洞上报流程与支持范围。
 
 ---
 
