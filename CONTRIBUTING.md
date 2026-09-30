@@ -31,7 +31,7 @@ HushJSON（仓库与包标识 `hush-json`）— 本地优先的 JSON 格式化 /
 | `src-tauri/` | Rust 后端 + 桌面/iOS/AppStore 配置 + 图标 | ✅ 源码 |
 | `src-tauri/gen/apple/` | Xcode 工程（由 `tauri ios init` 生成） | ❌ 自动生成 |
 | `src-tauri/target/` | Rust 构建产物 | ❌ 已忽略 |
-| `scripts/` | 构建 / 版本 / 图标 / 上架脚本（19 个，见 §6） | ✅ 源码 |
+| `scripts/` | 构建 / 版本 / 图标 / 上架脚本（15 个，见 §6） | ✅ 源码 |
 | `tests/` | 布局冒烟测试 | ✅ 源码 |
 | `screenshots/` | 截图**源文件**（`phone/`、`ipad-portrait/`） | ✅ 源码 |
 | `.monkeycode/docs/` | 项目内部文档（里程碑、优化指南、开发日志、审核回复） | ✅ 源码 |
@@ -144,9 +144,9 @@ node tests/tauri-detection.spec.mjs
 | 脚本 | 用途 |
 |---|---|
 | `build.js` | 把 `src/app/{router,store,actions,render}.js` + `src/app.js` 合并为单个 `dist/app.js`，并拷贝静态资源 |
-| `bump-version.js` | 写 `version.json` 并同步全部 9 个版本文件（`npm run bump`） |
-| `sync-versions.js` | 同步/校验 8 个版本文件，含 `Cargo.lock` 精准改写 |
-| `check-versions.js` | CI 版本一致性校验（4 个关键文件） |
+| `bump-version.js` | 写 `version.json` 并同步其余 7 个版本文件（`npm run bump`） |
+| `sync-versions.js` | 同步 7 个版本文件，含 `Cargo.lock` 精准改写 |
+| `check-versions.js` | CI 版本一致性校验（5 个关键文件） |
 | `bump-build.js` | 递增 App Store 构建号 |
 | `pre-commit-check.js` | 提交前检查（`npm run check:cdn`，校验无外部 CDN 引用） |
 

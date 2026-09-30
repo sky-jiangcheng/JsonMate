@@ -354,7 +354,8 @@ node tests/layout.spec.mjs
 | 位置 | 取值 | 理由 |
 |------|------|------|
 | 品牌名：`productName`、页头 Logo、PWA `short_name`、iOS/macOS 图标标签、水印默认值 | `HushJSON` | 8 字符，低于 iOS `CFBundleName` 15 字符上限，标题栏与图标标签都不截断 |
-| 完整展示名：窗口标题、HTML `<title>`、PWA `name`、隐私政策 | `HushJSON: JSON Formatter` | 品牌 + 品类，24 字符符合 App Store 30 字符上限 |
+| 完整展示名：窗口标题、HTML `<title>`、PWA `name` | `HushJSON: JSON Formatter` | 品牌 + 品类，24 字符符合 App Store 30 字符上限 |
+| 隐私政策页标题 | `隐私政策 · Privacy Policy — HushJSON` | 页面性质词在前、品牌名收尾，不取完整展示名 |
 | 标识层：GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀 | `hush-json` | 改动会切断 URL / 已装用户升级链，**不随品牌变** |
 | Apple Bundle ID | `com.jsonbeautify.desktop.appstore[.ios]` | Apple 永久锁定，与品牌无关 |
 

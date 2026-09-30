@@ -170,17 +170,19 @@ npm run dev             # tauri dev,带热重载
 
 ## 运行测试
 
-项目使用 Playwright 驱动的布局冒烟测试,覆盖响应式断点、i18n 切换与主题持久化。
+项目使用 Playwright 驱动的测试,走系统 Chrome(`channel: 'chrome'`),**无需** `npx playwright install`。共 3 个 spec:布局冒烟(响应式断点、i18n 切换、主题持久化)、输出区状态机与 Tauri 环境探测。
 
 ```bash
 npm install
-npx playwright install chromium   # 首次需要
+node scripts/build.js             # spec 读取 dist/,必须先构建
 node tests/layout.spec.mjs
+node tests/output-state.spec.mjs
+node tests/tauri-detection.spec.mjs
 ```
 
-> 仓库**没有** `npm test` 脚本。CI(`Layout Smoke Tests` 工作流)执行的也是上面这条 `node tests/layout.spec.mjs`。
+> 仓库**没有** `npm test` 脚本。CI(`Layout Smoke Tests` 工作流)按上面同样的顺序执行。
 
-修改 `src/` 下的布局或样式后请务必跑一遍。详见 [ARCHITECTURE.md](ARCHITECTURE.md#测试)。
+修改 `src/` 下的布局或样式后请务必跑一遍。详见 [ARCHITECTURE.md](ARCHITECTURE.md#10-测试策略)。
 
 ---
 
@@ -212,7 +214,8 @@ npm run build:appstore # macOS App Store .pkg
 | 位置 | 取值 |
 |------|------|
 | 品牌名(`productName`、PWA `short_name`、页头 Logo、iOS/macOS 图标标签、水印默认值) | `HushJSON` |
-| 完整展示名(窗口标题、HTML `<title>`、PWA `name`、隐私政策标题) | `HushJSON: JSON Formatter` |
+| 完整展示名(窗口标题、HTML `<title>`、PWA `name`) | `HushJSON: JSON Formatter` |
+| 隐私政策页标题 | `隐私政策 · Privacy Policy — HushJSON` |
 | 仓库与包标识(GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀) | `hush-json` |
 | App Store 上架名 | `HushJSON: JSON Formatter`(在 App Store Connect 元数据里设置,**不由仓库承载**) |
 
@@ -277,12 +280,12 @@ npm run build:appstore # macOS App Store .pkg
 │       ├── actions.js         #     纯业务逻辑,不碰 DOM
 │       ├── render.js          #     状态 → DOM 渲染
 │       └── router.js          #     设备类型与 UI 层判定
-├── scripts/                   ← 构建、版本、图标、上架脚本(19 个)
+├── scripts/                   ← 构建、版本、图标、上架脚本(15 个)
 ├── tests/layout.spec.mjs      ← 布局冒烟测试
 ├── src-tauri/                 ← Tauri 桌面 / iOS 工程(Rust)
 │   ├── src/                   #   Rust 源码(lib.rs / main.rs)
 │   ├── capabilities/          #   权限声明(core:default only)
-│   ├── tauri.*.conf.json      #   5 套平台配置
+│   ├── tauri.*.conf.json      #   3 套平台配置
 │   ├── gen/apple/             #   Xcode 工程(由 tauri ios init 生成,不入库)
 │   └── target/                #   Rust 构建产物(已忽略)
 ├── screenshots/               ← 截图源文件

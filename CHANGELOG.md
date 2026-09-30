@@ -1,11 +1,11 @@
 # 更新日志
 
-本文件记录 Advanced JSON Formatter 的所有版本变更。
+本文件记录 HushJSON 的所有版本变更。
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
-> 项目历经多次更名：`JsonBeautify` → `JsonNest` → `JsonMate` → `advanced-json-formatter`（2026-09-29）。
+> 项目历经多次更名：`JsonBeautify` → `JsonNest` → `JsonMate` → `advanced-json-formatter`（2026-09-29）→ `HushJSON` / `hush-json`（2026-09-30）。
 > Bundle ID 始终保持不变。
 
 ---
