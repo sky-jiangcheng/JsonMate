@@ -28,12 +28,20 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 
+// sw.js 的 CACHE_NAME 前缀派生自 package.json 的 name，不再写死字面量：
+// 否则仓库/包改名后这条正则会静默匹配不到，readVersion 返回 null，
+// 检查会以"(缺失)"失败 —— 或者更糟，被放宽成不比前缀的哑弹。
+const PKG_NAME = JSON.parse(
+  fs.readFileSync(path.join(ROOT, 'package.json'), 'utf-8')
+).name;
+const PKG_NAME_RE = PKG_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const FILES = {
   'version.json': /"version":\s*"([^"]+)"/,
   'package.json': /"version":\s*"([^"]+)"/,
   'src-tauri/tauri.conf.json': /"version":\s*"([^"]+)"/,
   'src-tauri/Cargo.toml': /^\s*version\s*=\s*"([^"]+)"/m,
-  'sw.js': /CACHE_NAME\s*=\s*'advanced-json-formatter-v([\d\.]+)'/,
+  'sw.js': new RegExp(`CACHE_NAME\\s*=\\s*'${PKG_NAME_RE}-v([\\d\\.]+)'`),
 };
 
 function readVersion(file, re) {

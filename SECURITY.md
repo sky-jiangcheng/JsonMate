@@ -113,7 +113,7 @@ HushJSON 的安全模型、漏洞上报流程与支持范围。
 检查 CSP 是否生效：
 
 ```bash
-curl -sI https://sky-jiangcheng.github.io/advanced-json-formatter/ | grep -i content-security-policy
+curl -sI https://sky-jiangcheng.github.io/hush-json/ | grep -i content-security-policy
 ```
 
 Tauri 应用的 CSP 在 `tauri.conf.json` 的 `app.security.csp` 中定义，桌面端与网页端一致。

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'advanced-json-formatter-v1.5.82';
+const CACHE_NAME = 'hush-json-v1.5.82';
 const urlsToCache = [
   './',
   './index.html',

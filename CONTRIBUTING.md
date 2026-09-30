@@ -1,6 +1,6 @@
 # 项目规范（CONTRIBUTING）
 
-HushJSON（仓库与包标识 `advanced-json-formatter`）— 本地优先的 JSON 格式化 / 验证 / 对比工具（Tauri v2 桌面 + iOS + 网页）。
+HushJSON（仓库与包标识 `hush-json`）— 本地优先的 JSON 格式化 / 验证 / 对比工具（Tauri v2 桌面 + iOS + 网页）。
 
 本文件定义目录归属、构建链路、测试、版本与提交约定，避免「文件散落、重复副本、源真值不清」。
 
@@ -83,7 +83,7 @@ HushJSON（仓库与包标识 `advanced-json-formatter`）— 本地优先的 JS
 ```
 package.json                      → "version"
 src-tauri/Cargo.toml              → version
-src-tauri/Cargo.lock              → advanced-json-formatter 包的 version
+src-tauri/Cargo.lock              → hush-json 包的 version
 src-tauri/tauri.conf.json         → "version"
 src-tauri/tauri.appstore.conf.json→ "version"
 src-tauri/tauri.ios.conf.json     → "version"

@@ -650,7 +650,15 @@ jobs:
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          PBXPROJ="src-tauri/gen/apple/advanced-json-formatter.xcodeproj/project.pbxproj"
+          # 工程目录名由 `tauri ios init` 生成，随包名变化（本仓库/包改名后它就叫别的了）。
+          # 因此这里探测而不是写死路径 —— 写死的版本在改名后会以 "No such file" 崩在 iOS job。
+          PBXPROJ=$(find src-tauri/gen/apple -maxdepth 2 -name project.pbxproj | head -1)
+          if [ -z "$PBXPROJ" ]; then
+            echo "::error::未找到 project.pbxproj，ios init 可能没有生成 Xcode 工程"
+            exit 1
+          fi
+          export PBXPROJ
+          echo "pbxproj: $PBXPROJ"
           # 输出当前签名配置用于调试
           echo "=== Before ==="
           grep -E "(DEVELOPMENT_TEAM|CODE_SIGN_STYLE|PROVISIONING_PROFILE|CODE_SIGN_IDENTITY|PRODUCT_BUNDLE_IDENTIFIER)" "$PBXPROJ" | head -20
@@ -663,7 +671,9 @@ jobs:
           team_id = os.environ.get("APPLE_TEAM_ID", "")
           profile_name = os.environ.get("PROFILE_NAME", "")
           profile_uuid = os.environ.get("PROFILE_UUID", "")
-          pbxproj_path = "src-tauri/gen/apple/advanced-json-formatter.xcodeproj/project.pbxproj"
+          # 从 env 取上面 find 到的真实路径：PYEOF 是引号 heredoc 不做 shell 展开，
+          # 在这里再写死一遍就会与 shell 侧的 $PBXPROJ 脱钩（改名时改一处漏一处）。
+          pbxproj_path = os.environ["PBXPROJ"]
 
           with open(pbxproj_path, "r") as f:
               content = f.read()

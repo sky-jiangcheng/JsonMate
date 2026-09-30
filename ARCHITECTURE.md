@@ -251,9 +251,9 @@ activate → 删除所有非当前 CACHE_NAME 的旧缓存
 fetch    → 有缓存先返回缓存，同时后台 fetch 并写回缓存
 ```
 
-缓存键格式 `advanced-json-formatter-v<version>`，**随版本号自动失效** —— 这也是 `sw.js` 必须在 bump 时同步版本的原因（见 [CONTRIBUTING.md §4](CONTRIBUTING.md)）。
+缓存键格式 `hush-json-v<version>`，**随版本号自动失效** —— 这也是 `sw.js` 必须在 bump 时同步版本的原因（见 [CONTRIBUTING.md §4](CONTRIBUTING.md)）。
 
-`manifest.json` 声明 `display: standalone`、`start_url` 与 `scope` 均为 `/advanced-json-formatter/`（**大小写敏感**，跟随仓库名）。
+`manifest.json` 声明 `display: standalone`、`start_url` 与 `scope` 均为 `/hush-json/`（**大小写敏感**，跟随仓库名）。
 
 ---
 
@@ -355,7 +355,7 @@ node tests/layout.spec.mjs
 |------|------|------|
 | 品牌名：`productName`、页头 Logo、PWA `short_name`、iOS/macOS 图标标签、水印默认值 | `HushJSON` | 8 字符，低于 iOS `CFBundleName` 15 字符上限，标题栏与图标标签都不截断 |
 | 完整展示名：窗口标题、HTML `<title>`、PWA `name`、隐私政策 | `HushJSON: JSON Formatter` | 品牌 + 品类，24 字符符合 App Store 30 字符上限 |
-| 标识层：GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀 | `advanced-json-formatter` | 改动会切断 URL / 已装用户升级链，**不随品牌变** |
+| 标识层：GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀 | `hush-json` | 改动会切断 URL / 已装用户升级链，**不随品牌变** |
 | Apple Bundle ID | `com.jsonbeautify.desktop.appstore[.ios]` | Apple 永久锁定，与品牌无关 |
 
 > 窗口标题**不随语言切换**，各语言共用同一份品牌串。测试对此有断言（`tests/layout.spec.mjs`）。

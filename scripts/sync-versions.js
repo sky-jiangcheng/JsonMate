@@ -6,7 +6,7 @@
    覆盖清单（与 check-versions.js 的门禁清单取并集）：
      - package.json
      - src-tauri/Cargo.toml
-     - src-tauri/Cargo.lock   (仅 advanced-json-formatter 包条目)
+     - src-tauri/Cargo.lock   (仅本包条目, 包名取自 package.json 的 name)
      - src-tauri/tauri.conf.json
      - src-tauri/tauri.appstore.conf.json
      - src-tauri/tauri.ios.conf.json
@@ -21,6 +21,10 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 const VERSION_FILE = path.join(ROOT, 'version.json');
+
+// CACHE_NAME 前缀与 Cargo.lock 里的包条目名都派生自 package.json 的 name，
+// 不写死字面量 —— 仓库/包改名时这里写死会直接 throw 让 build.js 失败。
+const PKG_NAME = JSON.parse(read(path.join(ROOT, 'package.json'))).name;
 
 function read(p) { return fs.readFileSync(p, 'utf-8'); }
 function write(p, content, version) {
@@ -58,13 +62,13 @@ function main() {
     patchVersionedString('src-tauri/tauri.ios.conf.json',
         /("version"\s*:\s*")(\d+\.\d+\.\d+)(")/, version, 'version field');
     patchVersionedString('sw.js',
-        /(const CACHE_NAME = 'advanced-json-formatter-v)(\d+\.\d+\.\d+)(')/, version, 'CACHE_NAME');
+        new RegExp(`(const CACHE_NAME = '${PKG_NAME}-v)(\\d+\\.\\d+\\.\\d+)(')`), version, 'CACHE_NAME');
 
-    // Cargo.lock: 只改 advanced-json-formatter 包自己的 version 行（其他依赖不动）
+    // Cargo.lock: 只改本包自己的 version 行（包名取自 package.json，其他依赖不动）
     const lockPath = 'src-tauri/Cargo.lock';
     const lock = read(lockPath);
-    const pkgRe = /(\[\[package\]\]\r?\nname = "advanced-json-formatter"\r?\nversion = ")(\d+\.\d+\.\d+)(")/;
-    if (!pkgRe.test(lock)) throw new Error('Cargo.lock: advanced-json-formatter package entry not found');
+    const pkgRe = new RegExp(`(\\[\\[package\\]\\]\\r?\\nname = "${PKG_NAME}"\\r?\\nversion = ")(\\d+\\.\\d+\\.\\d+)(")`);
+    if (!pkgRe.test(lock)) throw new Error(`Cargo.lock: ${PKG_NAME} package entry not found`);
     write(lockPath, lock.replace(pkgRe, (m, p1, p2, p3) => p1 + version + p3), version);
 
     console.log(`\nAll version files synced to ${version}.`);

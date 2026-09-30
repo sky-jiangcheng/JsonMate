@@ -1,10 +1,10 @@
 [package]
-name = "advanced-json-formatter"
+name = "hush-json"
 version = "1.5.82"
 description = "HushJSON: JSON Formatter - 支持格式化、压缩、树形视图、对比和历史记录"
 authors = ["sky-jiangcheng"]
 license = "MIT"
-repository = "https://github.com/sky-jiangcheng/advanced-json-formatter"
+repository = "https://github.com/sky-jiangcheng/hush-json"
 edition = "2021"
 
 [lib]

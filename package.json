@@ -1,5 +1,5 @@
 {
-  "name": "advanced-json-formatter",
+  "name": "hush-json",
   "version": "1.5.82",
   "description": "HushJSON: JSON Formatter - Tauri 桌面应用",
   "private": true,

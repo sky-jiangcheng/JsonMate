@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: 🔒 安全漏洞
-    url: https://github.com/sky-jiangcheng/advanced-json-formatter/security/advisories/new
+    url: https://github.com/sky-jiangcheng/hush-json/security/advisories/new
     about: 请通过私密渠道报告安全问题，不要公开提交 Issue。详见 SECURITY.md。
   - name: ❓ 使用问题
-    url: https://github.com/sky-jiangcheng/advanced-json-formatter/discussions
+    url: https://github.com/sky-jiangcheng/hush-json/discussions
     about: 提问、用法讨论与经验分享。

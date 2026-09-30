@@ -40,7 +40,7 @@ assignees: ''
 | 项 | 值 |
 |---|---|
 | 运行环境 | 网页版 / macOS / Windows / Linux / iOS |
-| 版本 | <!-- 见应用内「关于」或 https://github.com/sky-jiangcheng/advanced-json-formatter/releases --> |
+| 版本 | <!-- 见应用内「关于」或 https://github.com/sky-jiangcheng/hush-json/releases --> |
 | 浏览器 / 系统版本 | |
 | 界面语言 | zh / en / es / de / ja |
 

@@ -2,10 +2,10 @@
 
 一个现代化的 JSON 格式化、压缩、验证与对比工具。**纯前端、零后端、零数据上传**,支持 Web / 桌面端 / iOS,内置 5 种界面语言。
 
-> **在线使用** → [sky-jiangcheng.github.io/advanced-json-formatter](https://sky-jiangcheng.github.io/advanced-json-formatter/)
+> **在线使用** → [sky-jiangcheng.github.io/hush-json](https://sky-jiangcheng.github.io/hush-json/)
 
-[![Pages](https://github.com/sky-jiangcheng/advanced-json-formatter/actions/workflows/pages.yml/badge.svg)](https://github.com/sky-jiangcheng/advanced-json-formatter/actions/workflows/pages.yml)
-[![Release](https://img.shields.io/github/v/release/sky-jiangcheng/advanced-json-formatter?label=release&color=blue)](https://github.com/sky-jiangcheng/advanced-json-formatter/releases)
+[![Pages](https://github.com/sky-jiangcheng/hush-json/actions/workflows/pages.yml/badge.svg)](https://github.com/sky-jiangcheng/hush-json/actions/workflows/pages.yml)
+[![Release](https://img.shields.io/github/v/release/sky-jiangcheng/hush-json?label=release&color=blue)](https://github.com/sky-jiangcheng/hush-json/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
 
@@ -211,7 +211,7 @@ npm run build:appstore # macOS App Store .pkg
 |------|------|
 | 品牌名(`productName`、PWA `short_name`、页头 Logo、iOS/macOS 图标标签、水印默认值) | `HushJSON` |
 | 完整展示名(窗口标题、HTML `<title>`、PWA `name`、隐私政策标题) | `HushJSON: JSON Formatter` |
-| 仓库与包标识(GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀) | `advanced-json-formatter` |
+| 仓库与包标识(GitHub slug、npm / Cargo `name`、Pages 路径、`CACHE_NAME` 前缀) | `hush-json` |
 | App Store 上架名 | `HushJSON: JSON Formatter`(在 App Store Connect 元数据里设置,**不由仓库承载**) |
 
 > **Bundle ID 永不随品牌改动** —— `com.jsonbeautify.*` 已被 Apple 锁定,变更会切断升级识别链。
@@ -224,9 +224,9 @@ npm run build:appstore # macOS App Store .pkg
 
 站点是完整的渐进式 Web App:
 
-- `manifest.json` 声明了图标、名称、`display: standalone` 与 `/advanced-json-formatter/` 作用域
+- `manifest.json` 声明了图标、名称、`display: standalone` 与 `/hush-json/` 作用域
 - `sw.js` 实现了 **stale-while-revalidate** 策略:优先返回缓存、后台静默更新
-- 缓存键为 `advanced-json-formatter-v<version>`,随版本号自动失效
+- 缓存键为 `hush-json-v<version>`,随版本号自动失效
 
 在支持的浏览器中可通过「安装到主屏幕」以独立窗口打开,**断网后仍可完整使用** —— 所有 JSON 处理都在本地完成。
 

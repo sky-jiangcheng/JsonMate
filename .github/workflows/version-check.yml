@@ -41,7 +41,9 @@ jobs:
           pkg=$(jq -r '.version' package.json)
           conf=$(jq -r '.version' src-tauri/tauri.conf.json)
           cargo_ver=$(awk -F'"' '/^[[:space:]]*version[[:space:]]*=/{print $2; exit}' src-tauri/Cargo.toml)
-          sw_ver=$(sed -n "s/.*advanced-json-formatter-v\([0-9.]*\)'.*/\1/p" sw.js)
+          # CACHE_NAME 前缀取自 package.json 的 name: 仓库/包改名后不必再来改这里
+          pkgname=$(jq -r '.name' package.json)
+          sw_ver=$(sed -n "s/.*${pkgname}-v\([0-9.]*\)'.*/\1/p" sw.js)
 
           echo "package.json=$pkg tauri.conf.json=$conf Cargo.toml=$cargo_ver sw.js=$sw_ver"
 
