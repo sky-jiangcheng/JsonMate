@@ -839,4 +839,5 @@
 ### Changed
 - `<html lang>` 静态初始值由 `zh` 改为 `en`，与应用的兜底语言（`localStorage 偏好 → 系统语言 → 英文`）及英文 meta 层一致
 - `manifest.json` 与 `package.json` 的 `description` 改为英文（面向应用商店索引与搜索场景；PWA `name` / 窗口标题等展示名保持 `HushJSON: JSON Formatter` 不变）
+- 英文版 README 转正为仓库默认首页 `README.md`，中文版更名 `README.zh-CN.md`（GitHub 仓库页固定渲染 `README.md`，默认显示英文以与英文 About/topics 一致；两份文件顶部语言切换链接同步更新）
 
