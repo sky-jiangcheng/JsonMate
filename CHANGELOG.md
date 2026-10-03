@@ -849,3 +849,12 @@
 - 输出区空状态的占位文案（「格式化后的 JSON 将显示在这里」，5 种语言）与大括号装饰图标全部移除，空状态仅保留空白画布。静态 HTML 初始块、`render.js` 的空状态重建逻辑、5 语言 i18n 键、`.output-placeholder` CSS 规则（桌面 + 移动端分组选择器）与不再被引用的 `icon-braces` SVG symbol 一并清理
 - 测试状态机 `output-state.spec.mjs` 的 `placeholder` 分类分支随元素移除（现有断言只覆盖 tree / error 流转，不受影响）
 
+
+## [1.5.85] - 2026-10-03
+
+### Fixed
+- Service Worker 预缓存清单补上 `styles.mobile.css` 与 `logo.png`：两者此前只靠 fetch handler 的运行时缓存兜底，首次访问时若子资源加载中途断网，移动端离线打开会缺整套移动端样式
+- `getHistory` 撞号重命名后的最终 id 未登记回 `seen`：存量记录 id 为 `[x, x, x-1]` 时第 2 条改名成 `x-1`，第 3 条的显式 `x-1` 会拿到重复 id，按 id 删除/勾选会同时命中两条
+
+### Changed
+- 输出树与对比视图渲染包上降级保护：极深嵌套的合法 JSON 能通过 `JSON.parse` 却会让递归渲染栈溢出，现降级为纯文本展示而不是让异常打断输出区

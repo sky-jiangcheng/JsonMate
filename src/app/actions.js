@@ -92,6 +92,10 @@
         seen[n.id]++;
         n.id = n.id + '-' + seen[n.id];
         while (seen[n.id] !== undefined) { seen[n.id]++; n.id = n.id.replace(/-\d+$/, '') + '-' + seen[n.id]; }
+        // 重命名后的最终 id 必须登记为已占用: while 未进入时上面不会登记,
+        // 之后某条显式同号记录(如存量里同时有 id x / x / x-1)会拿到同一个 id,
+        // 按 id 删除/勾选就会同时命中两条
+        seen[n.id] = 0;
       } else {
         seen[n.id] = 0;
       }

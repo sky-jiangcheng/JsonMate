@@ -1,6 +1,6 @@
 {
   "name": "hush-json",
-  "version": "1.5.84",
+  "version": "1.5.85",
   "description": "HushJSON: JSON Formatter - pure frontend JSON formatter, validator, minifier and diff tool (Web / Tauri desktop / iOS)",
   "private": true,
   "scripts": {

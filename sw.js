@@ -1,10 +1,12 @@
-const CACHE_NAME = 'hush-json-v1.5.84';
+const CACHE_NAME = 'hush-json-v1.5.85';
 const urlsToCache = [
   './',
   './index.html',
   './head.js',
   './app.js',
   './styles.css',
+  './styles.mobile.css',
+  './logo.png',
   './manifest.json',
   './highlight.min.js',
   './highlight-atom-one-dark.min.css',

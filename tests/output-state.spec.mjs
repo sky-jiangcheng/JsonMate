@@ -14,6 +14,11 @@
       Object.prototype 上的同名成员，产生假的 changed，并把一个函数交给
       渲染器（renderJsonNode 对函数返回空串），对应行渲染成空白。
 
+   C. getHistory 撞号 id 去重（运行时，localStorage 桩，无需浏览器）
+      存量记录 id 为 [x, x, x-1] 时，第 2 条撞号改名成 x-1 后必须把该 id
+      登记回 seen；否则第 3 条的显式 x-1 会拿到同一个 id，按 id 删除/勾选
+      会同时命中两条。
+
    运行: node scripts/build.js && node tests/output-state.spec.mjs
    依赖: playwright-core + 系统 Chrome（与 layout.spec.mjs 一致）；
         跳过 A 段（无浏览器环境）时设 SKIP_BROWSER=1，B 段仍会执行。
@@ -129,7 +134,47 @@ async function testErrorFlow() {
   }
 }
 
+/* ---------------- C. getHistory 撞号 id 去重 ---------------- */
+
+function testHistoryIdCollision() {
+  console.log('\n● getHistory 撞号 id 去重（运行时，localStorage 桩）');
+  const store = new Map();
+  const localStorageStub = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  localStorageStub.setItem('jsonHistory', JSON.stringify([
+    { id: 'x', name: 'a', content: '{"a":1}' },
+    { id: 'x', name: 'b', content: '{"b":2}' },
+    { id: 'x-1', name: 'c', content: '{"c":3}' },
+  ]));
+
+  let actions = null;
+  try {
+    const src = readFileSync(join(ROOT, 'src/app/actions.js'), 'utf8');
+    const win = {};
+    new Function('window', 'localStorage', src)(win, localStorageStub);
+    actions = win.__actions;
+  } catch (e) {
+    check('能加载 actions.js', false, e.message);
+    return;
+  }
+  check('能加载 actions.js', !!actions);
+
+  const ids = actions.getHistory().map((h) => h.id);
+  check('互相撞号的 3 条记录得到 3 个不同 id',
+    ids.length === 3 && new Set(ids).size === 3, ids.join(', '));
+
+  // 按 id 删除只能命中一条: 重复 id 会让一次删除吞掉两条记录
+  const before = actions.getHistory();
+  const target = before[1].id;
+  const after = actions.deleteHistory(before, target, []).history;
+  check('按 id 删除恰好移除一条', after.length === 2, `before=${before.length} after=${after.length}`);
+}
+
 testDiffJson();
+testHistoryIdCollision();
 await testErrorFlow();
 console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
 process.exit(failed ? 1 : 0);
