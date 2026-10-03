@@ -258,6 +258,10 @@
         seen[n.id]++;
         n.id = n.id + '-' + seen[n.id];
         while (seen[n.id] !== undefined) { seen[n.id]++; n.id = n.id.replace(/-\d+$/, '') + '-' + seen[n.id]; }
+        // 重命名后的最终 id 必须登记为已占用: while 未进入时上面不会登记,
+        // 之后某条显式同号记录(如存量里同时有 id x / x / x-1)会拿到同一个 id,
+        // 按 id 删除/勾选就会同时命中两条
+        seen[n.id] = 0;
       } else {
         seen[n.id] = 0;
       }
@@ -1392,15 +1396,26 @@
     }, { signal: scrollController.signal });
 
     requestAnimationFrame(function () {
-      var oldObj = _actions.diffParse(items[0].content);
-      var newObj = _actions.diffParse(items[1].content);
-      var diff = diffJson(oldObj, newObj);
-      var leftMap = {}, rightMap = {};
-      collectDiffPaths(diff, '', leftMap, rightMap);
-      var leftHtml = renderJsonNodeWithDiff(null, oldObj, '', leftMap, 'left', oldObj);
-      var rightHtml = renderJsonNodeWithDiff(null, newObj, '', rightMap, 'right', newObj);
-      if (leftContent) leftContent.innerHTML = '<div class="json-tree">' + leftHtml + '</div>';
-      if (rightContent) rightContent.innerHTML = '<div class="json-tree">' + rightHtml + '</div>';
+      // 同输出树: 超深嵌套会让 diffJson/renderJsonNodeWithDiff 递归栈溢出,
+      // 降级为两侧纯文本展示, 对比功能不可用但不至于白屏
+      try {
+        var oldObj = _actions.diffParse(items[0].content);
+        var newObj = _actions.diffParse(items[1].content);
+        var diff = diffJson(oldObj, newObj);
+        var leftMap = {}, rightMap = {};
+        collectDiffPaths(diff, '', leftMap, rightMap);
+        var leftHtml = renderJsonNodeWithDiff(null, oldObj, '', leftMap, 'left', oldObj);
+        var rightHtml = renderJsonNodeWithDiff(null, newObj, '', rightMap, 'right', newObj);
+        if (leftContent) leftContent.innerHTML = '<div class="json-tree">' + leftHtml + '</div>';
+        if (rightContent) rightContent.innerHTML = '<div class="json-tree">' + rightHtml + '</div>';
+      } catch (e) {
+        console.warn('[render] diff render failed, falling back to plain text:', e);
+        var plain = function (el, text) {
+          if (el) el.innerHTML = '<pre style="white-space:pre-wrap;padding:12px;margin:0">' + _actions.escapeHtml(String(text == null ? '' : text)) + '</pre>';
+        };
+        plain(leftContent, items[0].content);
+        plain(rightContent, items[1].content);
+      }
     });
   }
 
@@ -2616,7 +2631,14 @@
       } else if (state.outputType === 'text') {
         renderTextOutput(state.output);
       } else {
-        renderRegularOutput(state.output, state.outputParsed);
+        // 极深嵌套的合法 JSON 能通过 JSON.parse(迭代实现)却会让树渲染递归栈溢出,
+        // 降级为纯文本渲染而不是让异常打断整个输出区
+        try {
+          renderRegularOutput(state.output, state.outputParsed);
+        } catch (e) {
+          console.warn('[render] tree render failed, falling back to text:', e);
+          renderTextOutput(state.output);
+        }
       }
       // 移动端: 仅在输出真正变化时切到 output tab（避免每次 setState 都切）
       if (state.outputType && state.outputType !== 'empty' && _router.isMobileDevice()) {
